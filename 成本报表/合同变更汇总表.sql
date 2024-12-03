@@ -1,3 +1,30 @@
+/*
+2024-11-29
+遗留问题现场签证的各原因汇总仍有部分项目未处理，检查原因可能是现场签证的各原因为空值导致，待进一步处理
+SELECT  DISTINCT  b.BillGUID
+--,b.*
+FROM  data_wide_cb_budgetuse b WITH(NOLOCK)
+left join (
+                        -- 现场签证未完工确认
+                        SELECT  AlterGUID,alterreason
+                        FROM  dbo.data_wide_cb_alter 
+                        WHERE  ApproveStateEnum =3 and  alterclass ='现场签证'
+                        AND  isnull(IsZjsp,0) =0
+                        group by AlterGUID,alterreason
+                        -- 现场签证完工确认
+                        UNION ALL 
+                        SELECT  AlterZJSPGUID,alterreason
+                        FROM  dbo.data_wide_cb_alter 
+                        WHERE  ApproveStateEnum =3 and  alterclass ='现场签证'
+                        AND  isnull(IsZjsp,0) =1
+                        group by AlterZJSPGUID,alterreason
+                  ) xz on b.billguid = xz.AlterGUID
+WHERE b.BillTypeEnum IN ( 8, 9) AND ApproveStateEnum = 3 AND  ISNULL(xz.AlterReason,'')=''
+*/
+
+-- declare @tjdate datetime = '2000-01-01'
+-- declare @projguid  varchar(50) ='9D6B5F12-ECCF-E911-8A8E-40F2E92B3FDA'
+
 --处理变更对应多分期
 SELECT  DISTINCT a.ContractGUID ,
                  b.ProjectCostOwnerGUIDs
@@ -25,52 +52,46 @@ SELECT  P1.ProjName AS 项目名称 ,
         SUM(bc.现场签证) AS 现场签证金额 ,
         SUM(bc.现场签证) / NULLIF(SUM(bc.变更原因分母用), 0) AS 现场签证比例 ,
         SUM(ISNULL(cb.HtAmount, 0) + ISNULL(cb.BcContractAmount, 0)) AS 合同净值加补协 ,
-        -- SUM(LjAlter.Cfamount_Total) AS 合同累计变更金额 ,
-        -- SUM(LjAlter.Cfamount_Total) / NULLIF(SUM(cb.TotalAmount), 0) AS 合同累计变更比例 ,
-        -- SUM(LjAlter.Cfamount_Design) AS 累计设计变更金额 ,
-        -- SUM(LjAlter.Cfamount_Design) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计设计变更比例 ,
-        -- SUM(LjAlter.Cfamount_Local) AS 累计现场签证金额 ,
-        -- SUM(LjAlter.Cfamount_Local) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计现场签证比例 ,
-        -- SUM(LjAlter.Cfamount_Mate) AS 累计材料调差金额 ,
-        -- SUM(LjAlter.Cfamount_Mate) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计材料调差比例 ,
 
-        SUM(bg.Cfamount_Total) AS 合同累计变更金额 ,
-        SUM(bg.Cfamount_Total) / NULLIF(SUM(cb.TotalAmount), 0) AS 合同累计变更比例 ,
-        SUM(bg.Cfamount_Design) AS 累计设计变更金额 ,
-        SUM(bg.Cfamount_Design) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计设计变更比例 ,
-        SUM(bg.Cfamount_Local) AS 累计现场签证金额 ,
-        SUM(bg.Cfamount_Local) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计现场签证比例 ,
+        SUM(LjAlter.Cfamount_Total) AS 合同累计变更金额 ,
+        SUM(LjAlter.Cfamount_Total) / NULLIF(SUM(cb.TotalAmount), 0) AS 合同累计变更比例 ,
+        SUM(LjAlter.Cfamount_Design) AS 累计设计变更金额 ,
+        SUM(LjAlter.Cfamount_Design) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计设计变更比例 ,
+        SUM(LjAlter.Cfamount_Local) AS 累计现场签证金额 ,
+        SUM(LjAlter.Cfamount_Local) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计现场签证比例 ,
         SUM(LjAlter.Cfamount_Mate) AS 累计材料调差金额 ,
         SUM(LjAlter.Cfamount_Mate) / NULLIF(SUM(cb.TotalAmount), 0) AS 累计材料调差比例 ,
+        -- 设计变更
+        SUM(LjAlter.设计变更营销管理因素) AS 设计变更营销管理因素金额 ,
+        SUM(LjAlter.设计变更营销管理因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更营销管理因素比例 ,
+        SUM(LjAlter.设计变更设计管理因素) AS 设计变更设计管理因素金额 ,
+        SUM(LjAlter.设计变更设计管理因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更设计管理因素比例 ,
+        SUM(LjAlter.设计变更经营管理因素) AS 设计变更经营管理因素金额 ,
+        SUM(LjAlter.设计变更经营管理因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更经营管理因素比例 ,
+        SUM(LjAlter.设计变更政策环境因素) AS 设计变更政策环境因素金额 ,
+        SUM(LjAlter.设计变更政策环境因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更政策环境因素比例 ,
+        SUM(LjAlter.设计变更工程管理因素) AS 设计变更工程管理因素金额 ,
+        SUM(LjAlter.设计变更工程管理因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更工程管理因素比例 ,
+        SUM(LjAlter.设计变更进度管理因素) AS 设计变更进度管理因素金额 ,
+        SUM(LjAlter.设计变更进度管理因素) / NULLIF(SUM(LjAlter.设计变更分母用), 0) AS 设计变更进度管理因素比例 ,
+        -- 现场签证
+        SUM(LjAlter.现场签证现场管理因素) AS 现场签证现场管理因素金额 ,
+        SUM(LjAlter.现场签证现场管理因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证现场管理因素比例 ,
+        SUM(LjAlter.现场签证工程签证因素) AS 现场签证工程签证因素金额 ,
+        SUM(LjAlter.现场签证工程签证因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证工程签证因素比例 ,
+        SUM(LjAlter.现场签证施工方案因素) AS 现场签证施工方案因素金额 ,
+        SUM(LjAlter.现场签证施工方案因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证施工方案因素比例 ,
+        SUM(LjAlter.现场签证进度管理因素) AS 现场签证进度管理因素金额 ,
+        SUM(LjAlter.现场签证进度管理因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证进度管理因素比例 ,
+        SUM(LjAlter.现场签证设计管理因素) AS 现场签证设计管理因素金额 ,
+        SUM(LjAlter.现场签证设计管理因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证设计管理因素比例 ,
+        SUM(LjAlter.现场签证索赔管理因素) AS 现场签证索赔管理因素金额 ,
+        SUM(LjAlter.现场签证索赔管理因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证索赔管理因素比例 ,
+        SUM(LjAlter.现场签证供应商因素) AS 现场签证供应商因素金额 ,
+        SUM(LjAlter.现场签证供应商因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证供应商因素比例 ,
+        SUM(LjAlter.现场签证营销因素) AS 现场签证营销因素金额 ,
+        SUM(LjAlter.现场签证营销因素) / NULLIF(SUM(LjAlter.现场签证分母用), 0) AS 现场签证营销因素比例 ,
 
-        SUM(bg.设计变更营销管理因素) AS 设计变更营销管理因素金额 ,
-        SUM(bg.设计变更营销管理因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更营销管理因素比例 ,
-        SUM(bg.设计变更设计管理因素) AS 设计变更设计管理因素金额 ,
-        SUM(bg.设计变更设计管理因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更设计管理因素比例 ,
-        SUM(bg.设计变更经营管理因素) AS 设计变更经营管理因素金额 ,
-        SUM(bg.设计变更经营管理因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更经营管理因素比例 ,
-        SUM(bg.设计变更政策环境因素) AS 设计变更政策环境因素金额 ,
-        SUM(bg.设计变更政策环境因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更政策环境因素比例 ,
-        SUM(bg.设计变更工程管理因素) AS 设计变更工程管理因素金额 ,
-        SUM(bg.设计变更工程管理因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更工程管理因素比例 ,
-        SUM(bg.设计变更进度管理因素) AS 设计变更进度管理因素金额 ,
-        SUM(bg.设计变更进度管理因素) / NULLIF(SUM(bg.设计变更分母用), 0) AS 设计变更进度管理因素比例 ,
-        SUM(bg.现场签证现场管理因素) AS 现场签证现场管理因素金额 ,
-        SUM(bg.现场签证现场管理因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证现场管理因素比例 ,
-        SUM(bg.现场签证工程签证因素) AS 现场签证工程签证因素金额 ,
-        SUM(bg.现场签证工程签证因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证工程签证因素比例 ,
-        SUM(bg.现场签证施工方案因素) AS 现场签证施工方案因素金额 ,
-        SUM(bg.现场签证施工方案因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证施工方案因素比例 ,
-        SUM(bg.现场签证进度管理因素) AS 现场签证进度管理因素金额 ,
-        SUM(bg.现场签证进度管理因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证进度管理因素比例 ,
-        SUM(bg.现场签证设计管理因素) AS 现场签证设计管理因素金额 ,
-        SUM(bg.现场签证设计管理因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证设计管理因素比例 ,
-        SUM(bg.现场签证索赔管理因素) AS 现场签证索赔管理因素金额 ,
-        SUM(bg.现场签证索赔管理因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证索赔管理因素比例 ,
-        SUM(bg.现场签证供应商因素) AS 现场签证供应商因素金额 ,
-        SUM(bg.现场签证供应商因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证供应商因素比例 ,
-        SUM(bg.现场签证营销因素) AS 现场签证营销因素金额 ,
-        SUM(bg.现场签证营销因素) / NULLIF(SUM(bg.现场签证分母用), 0) AS 现场签证营销因素比例 ,
         SUM(lx.设计变更审核实施份数) AS 设计变更审核实施份数 ,
         SUM(lx.设计变更不实施份数) AS 设计变更不实施份数 ,
         SUM(bg.已审核设计变更预估份数) AS 已审核设计变更预估份数 ,
@@ -123,34 +144,88 @@ FROM    data_wide_cb_contract cb
                   WHERE a.x_ReasonType IN ('项目需求', '设计需求', '营销需求', '设计变更', '现场签证')
                   GROUP BY b.mastercontractguid) bc ON cb.ContractGUID = bc.mastercontractguid
         --累计变更
-        LEFT JOIN(SELECT    ContractGUID ,
-                            SUM(CASE WHEN BillTypeEnum IN (6, 7, 8, 9, 20) THEN Cfamount ELSE 0 END) Cfamount_Total ,
-                            SUM(CASE WHEN BillTypeEnum IN (6, 7) THEN Cfamount ELSE 0 END) Cfamount_Design ,
-                            SUM(CASE WHEN BillTypeEnum IN (8, 9) THEN Cfamount ELSE 0 END) Cfamount_Local ,
-                            SUM(CASE WHEN BillTypeEnum IN (20) THEN Cfamount ELSE 0 END) Cfamount_Mate
+        LEFT JOIN(
+                  SELECT    ContractGUID ,
+                            SUM(CASE WHEN BillTypeEnum IN (20) or  ( BillTypeEnum IN (6, 7 ) and  desg.designalterguid is not null )  or  (BillTypeEnum IN (8, 9) and  xz.AlterGUID is not null) THEN Cfamount ELSE 0 END) as Cfamount_Total ,
+                            SUM(CASE WHEN (BillTypeEnum IN (6, 7) and  desg.designalterguid is not null ) THEN Cfamount ELSE 0 END) as Cfamount_Design ,
+                            SUM(CASE WHEN (BillTypeEnum IN (8, 9) and  xz.AlterGUID is not null) THEN Cfamount ELSE 0 END) Cfamount_Local ,
+                            SUM(CASE WHEN BillTypeEnum IN (20) THEN Cfamount ELSE 0 END) Cfamount_Mate,
+
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '营销管理因素' THEN Cfamount ELSE 0 END) AS 设计变更营销管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '设计管理因素' THEN Cfamount ELSE 0 END) AS 设计变更设计管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '经营管理因素' THEN Cfamount ELSE 0 END) AS 设计变更经营管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '政策环境因素' THEN Cfamount ELSE 0 END) AS 设计变更政策环境因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '工程管理因素' THEN Cfamount ELSE 0 END) AS 设计变更工程管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason = '进度管理因素' THEN Cfamount ELSE 0 END) AS 设计变更进度管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (6, 7)  and  desg.designalterguid is not null  AND   desg.alterreason IN ('营销管理因素', '设计管理因素', '经营管理因素', '政策环境因素', '工程管理因素', '进度管理因素') THEN Cfamount ELSE 0 END) AS 设计变更分母用,
+
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '现场管理因素' THEN Cfamount ELSE 0 END) AS 现场签证现场管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '工程签证因素' THEN Cfamount ELSE 0 END) AS 现场签证工程签证因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '施工方案因素' THEN Cfamount ELSE 0 END) AS 现场签证施工方案因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '进度管理因素' THEN Cfamount ELSE 0 END) AS 现场签证进度管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '设计管理因素' THEN Cfamount ELSE 0 END) AS 现场签证设计管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '索赔管理因素' THEN Cfamount ELSE 0 END) AS 现场签证索赔管理因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '供应商因素' THEN Cfamount ELSE 0 END) AS 现场签证供应商因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason = '营销管理因素' THEN Cfamount ELSE 0 END) AS 现场签证营销因素 ,
+                            SUM(CASE WHEN BillTypeEnum IN (8, 9) AND  xz.AlterGUID is not null and   xz.alterreason IN ('现场管理因素', '工程签证因素', '施工方案因素', '进度管理因素', '设计管理因素', '索赔管理因素', '供应商因素', '营销管理因素') THEN Cfamount ELSE 0 END) AS 现场签证分母用 
+                            
                   FROM  data_wide_cb_budgetuse b WITH(NOLOCK)
+                  left join  (
+                        -- 设计变更未完工确认
+                        select designalterguid,alterreason
+                        from  data_wide_cb_alter WITH(NOLOCK) 
+                        where  ApproveStateEnum = 3 and  CreatedTime >= @tjdate and  alterclass ='设计变更'
+                        and  isnull(IsZjsp,0) =0 
+                        group by designalterguid,alterreason
+                        -- 设计变更完工确认
+                        union all
+                        select  AlterZJSPGUID ,alterreason
+                        from  data_wide_cb_alter WITH(NOLOCK)
+                        where  ApproveStateEnum = 3 and  CreatedTime >= @tjdate and  alterclass ='设计变更'
+                        and  isnull(IsZjsp,0) =1
+                        group by AlterZJSPGUID,alterreason
+                  ) desg on b.billguid = desg.designalterguid
+                  left join (
+                        -- 现场签证未完工确认
+                        SELECT  AlterGUID,alterreason
+                        FROM  dbo.data_wide_cb_alter 
+                        WHERE  ApproveStateEnum =3 and  CreatedTime >= @tjdate and  alterclass ='现场签证'
+                        AND  isnull(IsZjsp,0) =0
+                        group by AlterGUID,alterreason
+                        -- 现场签证完工确认
+                        UNION ALL 
+                        SELECT  AlterZJSPGUID,alterreason
+                        FROM  dbo.data_wide_cb_alter 
+                        WHERE  ApproveStateEnum =3 and  CreatedTime >= @tjdate and  alterclass ='现场签证'
+                        AND  isnull(IsZjsp,0) =1
+                        group by AlterZJSPGUID,alterreason
+                  ) xz on b.billguid = xz.AlterGUID
                   WHERE b.BillTypeEnum IN (6, 7, 8, 9, 20) AND ApproveStateEnum = 3
-                  GROUP BY ContractGUID) LjAlter ON LjAlter.ContractGUID = cb.ContractGUID
+                  GROUP BY ContractGUID
+        ) LjAlter ON LjAlter.ContractGUID = cb.ContractGUID
         LEFT JOIN(SELECT    contractguid ,
-                            sum(case when alterclass = '设计变更' then  applyamount else  0  end  ) as Cfamount_Design,
-                            sum(case when alterclass = '现场签证' then  applyamount else  0  end  ) as Cfamount_Local,
-                            sum(case when alterclass in ('现场签证','设计变更')  then applyamount else  0  end  ) as Cfamount_Total,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '营销管理因素' THEN applyamount ELSE 0 END) AS 设计变更营销管理因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '设计管理因素' THEN applyamount ELSE 0 END) AS 设计变更设计管理因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '经营管理因素' THEN applyamount ELSE 0 END) AS 设计变更经营管理因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '政策环境因素' THEN applyamount ELSE 0 END) AS 设计变更政策环境因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '工程管理因素' THEN applyamount ELSE 0 END) AS 设计变更工程管理因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '进度管理因素' THEN applyamount ELSE 0 END) AS 设计变更进度管理因素 ,
-                            SUM(CASE WHEN alterclass = '设计变更' AND   alterreason IN ('营销管理因素', '设计管理因素', '经营管理因素', '政策环境因素', '工程管理因素', '进度管理因素') THEN applyamount ELSE 0 END) AS 设计变更分母用 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '现场管理因素' THEN applyamount ELSE 0 END) AS 现场签证现场管理因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '工程签证因素' THEN applyamount ELSE 0 END) AS 现场签证工程签证因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '施工方案因素' THEN applyamount ELSE 0 END) AS 现场签证施工方案因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '进度管理因素' THEN applyamount ELSE 0 END) AS 现场签证进度管理因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '设计管理因素' THEN applyamount ELSE 0 END) AS 现场签证设计管理因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '索赔管理因素' THEN applyamount ELSE 0 END) AS 现场签证索赔管理因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '供应商因素' THEN applyamount ELSE 0 END) AS 现场签证供应商因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '营销因素' THEN applyamount ELSE 0 END) AS 现场签证营销因素 ,
-                            SUM(CASE WHEN alterclass = '现场签证' AND   alterreason IN ('现场管理因素', '工程签证因素', '施工方案因素', '进度管理因素', '设计管理因素', '索赔管理因素', '供应商因素', '营销因素') THEN applyamount ELSE 0 END) AS 现场签证分母用 ,
+                        --     sum(case when alterclass = '设计变更' then  applyamount else  0  end  ) as Cfamount_Design,
+                        --     sum(case when alterclass = '现场签证' then  applyamount else  0  end  ) as Cfamount_Local,
+                        --     sum(case when alterclass in ('现场签证','设计变更')  then applyamount else  0  end  ) as Cfamount_Total,
+
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '营销管理因素' THEN applyamount ELSE 0 END) AS 设计变更营销管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '设计管理因素' THEN applyamount ELSE 0 END) AS 设计变更设计管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '经营管理因素' THEN applyamount ELSE 0 END) AS 设计变更经营管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '政策环境因素' THEN applyamount ELSE 0 END) AS 设计变更政策环境因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '工程管理因素' THEN applyamount ELSE 0 END) AS 设计变更工程管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason = '进度管理因素' THEN applyamount ELSE 0 END) AS 设计变更进度管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '设计变更' AND   alterreason IN ('营销管理因素', '设计管理因素', '经营管理因素', '政策环境因素', '工程管理因素', '进度管理因素') THEN applyamount ELSE 0 END) AS 设计变更分母用 ,
+                            
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '现场管理因素' THEN applyamount ELSE 0 END) AS 现场签证现场管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '工程签证因素' THEN applyamount ELSE 0 END) AS 现场签证工程签证因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '施工方案因素' THEN applyamount ELSE 0 END) AS 现场签证施工方案因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '进度管理因素' THEN applyamount ELSE 0 END) AS 现场签证进度管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '设计管理因素' THEN applyamount ELSE 0 END) AS 现场签证设计管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '索赔管理因素' THEN applyamount ELSE 0 END) AS 现场签证索赔管理因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '供应商因素' THEN applyamount ELSE 0 END) AS 现场签证供应商因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason = '营销因素' THEN applyamount ELSE 0 END) AS 现场签证营销因素 ,
+                        --     SUM(CASE WHEN alterclass = '现场签证' AND   alterreason IN ('现场管理因素', '工程签证因素', '施工方案因素', '进度管理因素', '设计管理因素', '索赔管理因素', '供应商因素', '营销因素') THEN applyamount ELSE 0 END) AS 现场签证分母用 ,
+                            
                             SUM(CASE WHEN alterclass = '设计变更' AND   iszjsp = 1 THEN 1 ELSE 0 END) AS 设计变更审核实施份数 ,
                             SUM(CASE WHEN alterclass = '设计变更' AND   ISNULL(iszjsp, 0) <> 1 THEN 1 ELSE 0 END) AS 设计变更不实施份数 ,
                             SUM(CASE WHEN alterclass = '设计变更' THEN 1 ELSE 0 END) AS 已审核设计变更预估份数 ,
@@ -173,9 +248,10 @@ FROM    data_wide_cb_contract cb
                             SUM(CASE WHEN alterclass = '现场签证' AND   iszjsp = 1 THEN 1 ELSE 0 END) AS 已审核现场签证完工确认份数 ,
                             SUM(CASE WHEN alterclass = '现场签证' AND   iszjsp = 1 THEN ZjspApplyAmount ELSE 0 END) AS 现场签证完工确认申报金额 ,
                             SUM(CASE WHEN alterclass = '现场签证' AND   iszjsp = 1 THEN ZjspAuditAmount ELSE 0 END) AS 现场签证完工确认审核金额
-                  FROM  data_wide_cb_alter
+                  FROM  data_wide_cb_alter WITH(NOLOCK)
                   WHERE ApproveState = '已审核'   AND   CreatedTime >= @tjdate
-                  GROUP BY contractguid) bg ON cb.contractguid = bg.contractguid
+                  GROUP BY contractguid
+      ) bg ON cb.contractguid = bg.contractguid
 /*
 --审核中
 left join 
@@ -304,7 +380,8 @@ group by b.contractguid
                   WHERE a.ApproveState = '未审核' AND c.projguid IN (@projguid)
                   GROUP BY b.contractguid ,
                            c.projguid) wsh2 ON cb.contractguid = wsh2.contractguid AND wsh2.projguid LIKE '%' + CAST(P.p_projectId AS VARCHAR(36)) + '%'
-WHERE   P.p_projectId IN (@projguid) AND CONVERT(DATE, cb.CreatedTime, 112) BETWEEN @签约开始日期 AND @签约结束日期
+WHERE   P.p_projectId IN (@projguid) 
+       AND CONVERT(DATE, cb.CreatedTime, 112) BETWEEN @签约开始日期 AND @签约结束日期
 GROUP BY P1.ProjName ,
          P.ProjName;
 
