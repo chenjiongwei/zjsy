@@ -42,7 +42,7 @@ select  distinct --解决跨项目过程重复
 		CASE WHEN b2.ReturnBidIP IS NULL THEN hxhb.ProviderReturnBidIP ELSE b2.ReturnBidIP END as '回标IP',
 		ISNULL(ISNULL(b2.ProviderPrice,hxhb.ProviderPrice),0) as '回标报价',
 		CASE WHEN ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate),0) = 0 THEN 0 ELSE ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate*100),0)/100 END as '税率',
-		CASE WHEN ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate),0) = 0 THEN 0 ELSE ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate*100),0)/100 END as '税率',
+		--CASE WHEN ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate),0) = 0 THEN 0 ELSE ISNULL(ISNULL(b2.ProviderTaxRate,hxhb.ProviderTaxRate*100),0)/100 END as '税率',
 		CASE WHEN a.x_IsHistory<>'1' THEN ISNULL(vp.ComprehensiveScore,0)
 		WHEN a.x_IsHistory IS NULL THEN ISNULL(vp.ComprehensiveScore,0)
 		WHEN a.x_IsHistory='1' THEN hxvp.ComprehensiveScore END  --核心定标得分
@@ -65,7 +65,8 @@ select  distinct --解决跨项目过程重复
 		ISNULL(x_OpenBidLocation,'') AS '开标地点',
 		a.Manager as '采购负责人',
 		VZ.CgSolutionSectionGUID,VZ.isend,
-		case when a.x_IsEntrustBid=1 then '是' ELSE '否' end as '是否委托股份招标'
+		case when a.x_IsEntrustBid=1 then '是' ELSE '否' end as '是否委托股份招标',
+		CASE WHEN e.iswinbid=1 THEN t.StageName  end AS '履约评价进度'
 from cg_cgsolution a
 LEFT JOIN cg_CgSolutionProject P ON a.CgSolutionGUID=P.SolutionGUID
 LEFT JOIN cg_CgType ty ON ty.CgTypeGUID=A.CgTypeGUID
@@ -84,6 +85,17 @@ inner join vcg_CgProcWinBid e on a.CgSolutionGUID = e.CgSolutionGUID and VZ.Prov
 left join cg_CgProcProviderSign f on a.CgSolutionGUID = f.CgSolutionGUID and VZ.ProviderGUID =f.ReturnBidProviderGUID and f.SectionProjectGUID = vb.BusinessGUID --签约供应商
 left join [172.16.22.29].[dotnet_erp352sp3].[dbo].cg_CgSolution hxcg on a.CgSolutionGUID = hxcg.CgSolutionGUID  --核心采购
 left join [172.16.22.29].[dotnet_erp352sp3].[dbo].Cg_CgProcReturnBid hxhb on a.CgSolutionGUID = hxhb.CgSolutionGUID and vz.ProviderGUID = hxhb.ProviderGUID and hxhb.CgSolutionSectionGUID=vz.CgSolutionSectionGUID --核心回标
+left join dotnet_erp60_MDC.dbo.data_wide_cg_CgSolution a1 on a.CgSolutionGUID = a1.CgSolutionGUID
+OUTER APPLY (
+    SELECT TOP 1
+           pf.PgName,
+           pf.ProviderGUID,
+           pf.StageName,
+           pf.RealEndDate
+    FROM dotnet_erp60_MDC.dbo.data_wide_cg_PgPerformTacticAgr pf
+    WHERE CHARINDEX(CONVERT(VARCHAR(36), pf.ProviderGUID), a1.WinBidProviderGUIDlist) >= 1
+    ORDER BY RealEndDate DESC
+) t 
 WHERE 	a.Status=2 
 		and a.IsTacticCg=0 
 		--and isnull(a.x_Ishistory,0)=0 
