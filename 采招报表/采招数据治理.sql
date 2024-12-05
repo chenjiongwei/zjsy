@@ -39,6 +39,9 @@ SELECT p_Provider.ProviderGUID,
        ProviderRecord.AdjustSource,
        ProviderRecord.AdjustDate,
        P2U.BUName,
+       ProviderRecord.AddBy,
+       ProviderRecord.AddByGUID,
+       ProviderRecord.Remark,
        (SELECT STUFF(
                (SELECT ',' + CONVERT(VARCHAR(200), b.BUName)
                 FROM p_Provider2Unit a
@@ -60,9 +63,13 @@ OUTER APPLY (
         ProviderRecord.AdjustSourceType,
         ProviderRecord.AdjustDate,
         pr.BUGUID,
-        bu.BUName
+        bu.BUName,
+        prs.AddBy,  -- 调整人
+        prs.AddByGUID, -- 调整人GUID
+        prs.Remark  -- 备注
     FROM p_ProviderRecordAdjust ProviderRecord
     inner join p_ProviderRecord pr on ProviderRecord.ProviderRecordGUID = pr.ProviderRecordGUID
+    inner join p_ProviderRecordStorage prs on prs.ProviderRecordGUID = pr.ProviderRecordGUID
     inner join myBusinessUnit bu on pr.BUGUID = bu.BUGUID
     WHERE ProviderRecord.ProviderGUID = p_Provider.ProviderGUID 
         AND AdjustSource = '直接入库' and  bu.BUName in ('城实公司','集团总部')
@@ -174,12 +181,19 @@ GROUP BY
     [MainCTE].x_DailyStrategic,
     case when  ZjrkProvider.ProviderGUID is not null then '是' else '否' end as 是否需要迁移,
     ZjrkProvider.BUNameList as 服务公司,
-    ZjrkProvider.AdjustSource as 调整来源
+    ZjrkProvider.AdjustSource as 调整来源,
+    ZjrkProvider.AddBy as 调整人,
+    ZjrkProvider.AddByGUID as 调整人GUID,
+    ZjrkProvider.Remark as 调整备注,
+    ZjrkProvider.BUFullName as 调整人所属公司全称
   FROM
     [MainCTE]
 OUTER APPLY  ( 
-   select  top  1 ZjrkProvider.BUNameList,ZjrkProvider.AdjustSource,ZjrkProvider.ProviderGUID,ZjrkProvider.AdjustDate 
-   from  #ZjrkProvider ZjrkProvider where   [MainCTE].ProviderGUID = ZjrkProvider.ProviderGUID
+   select  top  1 ZjrkProvider.BUNameList,ZjrkProvider.AdjustSource,ZjrkProvider.ProviderGUID,ZjrkProvider.AdjustDate,AddBy,AddByGUID,Remark,bu.BUFullName
+   from  #ZjrkProvider ZjrkProvider 
+   inner join myuser mu on ZjrkProvider.AddByGUID = mu.UserGUID
+   inner join myBusinessUnit bu on mu.BUGUID = bu.BUGUID
+   where   [MainCTE].ProviderGUID = ZjrkProvider.ProviderGUID
    order by ZjrkProvider.AdjustDate desc   
 ) ZjrkProvider  
 -- where  ZjrkProvider.ProviderGUID is not null
@@ -191,10 +205,10 @@ DROP TABLE #ZjrkProvider;
 
 -------------------------------------------------------------------------
 
--- 修复语句
+-- -- 修复语句
 
-select p_Provider2Unit.ProviderGUID,p_Provider2Unit.BUGUID 
-from p_Provider2Unit 
-inner join p_Provider p on p.ProviderGUID = p_Provider2Unit.ProviderGUID
-inner join myBusinessUnit bu on bu.BUGUID = p_Provider2Unit.BUGUID
-where p.ProviderName = '东莞市交通规划勘察设计院有限公司' and  bu.BUName = '城实公司'
+-- select p_Provider2Unit.ProviderGUID,p_Provider2Unit.BUGUID 
+-- from p_Provider2Unit 
+-- inner join p_Provider p on p.ProviderGUID = p_Provider2Unit.ProviderGUID
+-- inner join myBusinessUnit bu on bu.BUGUID = p_Provider2Unit.BUGUID
+-- where p.ProviderName = '东莞市交通规划勘察设计院有限公司' and  bu.BUName = '城实公司'

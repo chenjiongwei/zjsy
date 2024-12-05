@@ -70,6 +70,56 @@ BEGIN
 END
 
 
+    -- 修改月度回归中的描述
+    -- 璟润、城德：未开始  
+    -- 珠江花城五期的：延期未转固
+--备份数据表
+select * into cb_MonthlyReview_bak20241205 from cb_MonthlyReview
+
+    -- 璟润
+SELECT bu.BUName,p.ProjName,cbv.CurVersion,cbv.Remark  
+FROM  cb_MonthlyReview cbv
+INNER JOIN  dbo.p_Project  p ON p.p_projectId =cbv.ProjGUID
+INNER JOIN dbo.myBusinessUnit bu ON bu.BUGUID =p.BUGUID
+WHERE  p.Level =3 AND  p.p_projectId ='7856bdfb-340d-eb11-96c8-40f2e92b3fdd' AND  CurVersion ='20241202144051'
+
+
+-- 备注中【严重超期未转固】改成【未开始】
+update cbv
+set cbv.Remark = replace(cbv.Remark,'【严重超期未转固】','【未开始】')
+-- SELECT bu.BUName,p.ProjName,cbv.CurVersion,cbv.Remark  
+FROM  cb_MonthlyReview cbv
+INNER JOIN  dbo.p_Project  p ON p.p_projectId =cbv.ProjGUID
+INNER JOIN dbo.myBusinessUnit bu ON bu.BUGUID =p.BUGUID
+WHERE  p.Level =3 AND  p.p_projectId ='7856bdfb-340d-eb11-96c8-40f2e92b3fdd' AND  CurVersion ='20241202144051'
+
+
+
+  -- 城德
+  --广氮项目-一期
+SELECT bu.BUName,p.ProjName,cbv.CurVersion,cbv.Remark  
+FROM  cb_MonthlyReview cbv
+INNER JOIN  dbo.p_Project  p ON p.p_projectId =cbv.ProjGUID
+INNER JOIN dbo.myBusinessUnit bu ON bu.BUGUID =p.BUGUID
+WHERE  p.Level =3 AND  p.p_projectId ='70c4d0fd-b3f1-ea11-96c4-40f2e92b3fdd' AND  CurVersion ='20241205095239'
+  --广氮项目-二期 无回顾版本
+
+--珠江花城五期
+SELECT bu.BUName,p.ProjName,cbv.CurVersion,cbv.Remark  
+FROM  cb_MonthlyReview cbv
+INNER JOIN  dbo.p_Project  p ON p.p_projectId =cbv.ProjGUID
+INNER JOIN dbo.myBusinessUnit bu ON bu.BUGUID =p.BUGUID
+WHERE  p.Level =3 AND  p.p_projectId ='033df967-ab9e-e811-aef9-40f2e92b3fda' AND  CurVersion ='20241125000004'
+
+-- 备注中【严重超期未转固】改成【延期未转固】
+update cbv
+set cbv.Remark = replace(cbv.Remark,'【严重超期未转固】','【延期未转固】')
+--SELECT bu.BUName,p.ProjName,cbv.CurVersion,cbv.Remark  
+FROM  cb_MonthlyReview cbv
+INNER JOIN  dbo.p_Project  p ON p.p_projectId =cbv.ProjGUID
+INNER JOIN dbo.myBusinessUnit bu ON bu.BUGUID =p.BUGUID
+WHERE  p.Level =3 AND  p.p_projectId ='033df967-ab9e-e811-aef9-40f2e92b3fda' AND  CurVersion ='20241125000004'
+
 
 -- SELECT  a.BuGuid AS BUGUID ,
 --         bu.BUName AS BUName ,
