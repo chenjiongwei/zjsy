@@ -64,3 +64,45 @@ drop table #conitem
 drop table #Updateconitem 
 
 
+
+
+-- 关联错误进行修复
+-- 备份数据表
+SELECT  * INTO  cb_ContractItem_bak20241209  FROM  cb_ContractItem 
+-- 查询错误数据
+select * from cb_ContractItem where Code  in 
+('jyfdc-2024-01-0001',
+'一期 设变-D-21会审',
+'一期 设变-D-22会审',
+'设变-水-20会审',
+'璟逸工【2021】5号',
+'璟逸工【2021】52号',
+'璟逸工【2023】50号',
+'jyfdc-2023-06-0011',
+'璟逸工[2023]69号-关于花屿花城项目1-3#楼空调孔整改的事宜',
+'jyfdc-2023-06-0009',
+'设变-水-16的会审',
+'一期 设变-D-20会审',
+'一期 设变-D-19会审'
+)
+-- 更新关联合同信息 
+update  a
+set a.x_ContractGUID = (select ContractGUID from cb_Contract where ContractCode = '穗珠建专分字第20199号'),
+   a.x_ContractName = (select ContractName from cb_Contract where ContractCode = '穗珠建专分字第20199号')
+from  cb_ContractItem a
+where Code  in 
+('jyfdc-2024-01-0001',
+'一期 设变-D-21会审',
+'一期 设变-D-22会审',
+'设变-水-20会审',
+'璟逸工【2021】5号',
+'璟逸工【2021】52号',
+'璟逸工【2023】50号',
+'jyfdc-2023-06-0011',
+'璟逸工[2023]69号-关于花屿花城项目1-3#楼空调孔整改的事宜',
+'jyfdc-2023-06-0009',
+'设变-水-16的会审',
+'一期 设变-D-20会审',
+'一期 设变-D-19会审'
+)
+
