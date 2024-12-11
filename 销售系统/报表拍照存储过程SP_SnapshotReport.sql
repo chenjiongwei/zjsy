@@ -172,35 +172,51 @@ BEGIN
             GROUP BY  g.ParentProjGUID
         ) gg ON  gg.ProjGUID = pp.p_projectId
         LEFT  JOIN  (
-            SELECT 
-                bld.ProjGUID AS ProjGUID, 
-            --SUM(CASE WHEN  ISNULL(r.ScBldArea,0)<> 0  THEN  r.ScBldArea ELSE  r.YsBldArea END )  AS  BnQcchBldArea, 
-                SUM(CASE WHEN datediff(YEAR,BLD.FactNotOpen,getdate())=0 THEN
-                    ( CASE WHEN r.MasterBldGUID IS null THEN bld.AvailableArea ELSE r.BldArea
-                    END)
-                ELSE 0 END) AS BnxksBldArea,	--本年新开售面积            
-            --SUM(CASE WHEN BLD.FactNotOpen IS NULL THEN bld.AvailableArea ELSE 0 END) AS 	BnzjdjBldArea, --在建、待建面积	 
-                SUM(CASE WHEN r.MasterBldGUID IS null and bld.FactNotOpen IS not null THEN bld.AvailableArea ELSE 
-                    (CASE WHEN bld.FactNotOpen IS not null and (DATEDIFF(YEAR,tr.CQsDate,GetDate())=0 OR tr.CQsDate IS null)THEN
-                        (CASE WHEN  ISNULL(r.ScBldArea,0)<> 0  THEN  r.ScBldArea ELSE  r.YsBldArea END)
-                    ELSE 0 END )
-                END) AS BnQcchBldArea_QY, --签约口径本年期初库存            
-                SUM(CASE WHEN DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_QY,
-                SUM(CASE WHEN DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_QY,                              
-                --获取预售许可证日期-实际        
-                SUM(CASE WHEN r.MasterBldGUID IS null and bld.FactNotOpen IS not null THEN bld.AvailableArea ELSE         
-                        (CASE WHEN bld.FactNotOpen IS not null and  
-                        (DATEDIFF(YEAR,r.x_YeJiTime,GetDate()) = 0 OR r.x_YeJiTime IS null) THEN
+              SELECT 
+                    bld.ProjGUID AS ProjGUID, 
+                --SUM(CASE WHEN  ISNULL(r.ScBldArea,0)<> 0  THEN  r.ScBldArea ELSE  r.YsBldArea END )  AS  BnQcchBldArea, 
+                    SUM(CASE WHEN datediff(YEAR,BLD.FactNotOpen,getdate())=0 THEN
+                        ( CASE WHEN r.MasterBldGUID IS null THEN bld.AvailableArea ELSE r.BldArea
+                        END)
+                    ELSE 0 END) AS BnxksBldArea,	--本年新开售面积
+                --SUM(CASE WHEN BLD.FactNotOpen IS NULL THEN bld.AvailableArea ELSE 0 END) AS 	BnzjdjBldArea, --在建、待建面积	
+                    SUM(CASE WHEN  (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 ) 
+                        and  r.MasterBldGUID IS null and bld.FactNotOpen IS not null THEN bld.AvailableArea ELSE 
+                        (CASE WHEN  (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and  bld.FactNotOpen IS not null 
+                        and (DATEDIFF(YEAR,tr.CQsDate,GetDate())=0 OR tr.CQsDate IS null)THEN
                             (CASE WHEN  ISNULL(r.ScBldArea,0)<> 0  THEN  r.ScBldArea ELSE  r.YsBldArea END)
                         ELSE 0 END )
-                    END) AS BnQcchBldArea_YJ, --业绩口径本年期初库存                
-                SUM(CASE WHEN DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_YJ,
-                SUM(CASE WHEN DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_YJ  
-            FROM data_wide_mdm_building bld WITH(NOLOCK)
-            LEFT JOIN data_wide_s_Room r WITH(NOLOCK) ON bld.BuildingGUID = r.MasterBldGUID 
-            left JOIN data_wide_s_Trade tr WITH(NOLOCK)ON tr.RoomGUID = r.RoomGUID AND tr.TradeStatus = '激活' AND   tr.IsLast = 1
-            WHERE (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 OR bld.FactNotOpen is null) AND ( r.x_YeJiTime IS NULL  OR   DATEDIFF(year,r.x_YeJiTime,GETDATE() ) >=0) 
-            GROUP BY bld.ProjGUID
+                    END) AS BnQcchBldArea_QY, --签约口径本年期初库存	
+                        
+                    SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 
+                    THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_QY,
+                    SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 
+                    THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_QY,
+                                            
+                    --获取预售许可证日期-实际        
+                    SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   r.MasterBldGUID IS null and bld.FactNotOpen IS not null THEN bld.AvailableArea 
+                    ELSE 
+                            (CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and  bld.FactNotOpen IS not null and  
+                            (DATEDIFF(YEAR,r.x_YeJiTime,GetDate()) = 0 OR r.x_YeJiTime IS null) THEN
+                                (CASE WHEN  ISNULL(r.ScBldArea,0)<> 0  THEN  r.ScBldArea ELSE  r.YsBldArea END)
+                            ELSE 0 END )
+                        END) AS BnQcchBldArea_YJ, --业绩口径本年期初库存	
+                            
+                    SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 
+                    THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_YJ,
+                    SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 
+                    THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_YJ  
+                FROM data_wide_mdm_building bld WITH(NOLOCK)
+                    LEFT JOIN data_wide_s_Room r WITH(NOLOCK) ON bld.BuildingGUID = r.MasterBldGUID 
+                    left JOIN (
+                    select   CASE WHEN isnull(tr.x_InitialledDate,0)=0 and tr.CNetQsDate IS not null THEN  tr.CNetQsDate   
+                                WHEN isnull(tr.x_InitialledDate,0)=0 and isnull(tr.CNetQsDate,0)=0 THEN NULL  
+                            ELSE tr.x_InitialledDate END AS CQsDate, 
+                            RoomGUID,tr.TradeStatus,tr.IsLast,tr.TradeGUID,tr.CCjBldArea,tr.CCjRoomTotal
+                            from   data_wide_s_Trade  tr WITH (NOLOCK)
+                    )  tr  ON tr.RoomGUID = r.RoomGUID AND tr.TradeStatus = '激活' AND   tr.IsLast = 1 
+                    WHERE (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =0 OR bld.FactNotOpen is null) AND ( r.x_YeJiTime IS NULL  OR   DATEDIFF(year,r.x_YeJiTime,GETDATE() ) >=0) 
+                    GROUP BY bld.ProjGUID
         ) qcch ON qcch.ProjGUID = pp.p_projectId
         LEFT JOIN (
             SELECT  
@@ -214,26 +230,33 @@ BEGIN
             GROUP  BY  p.p_projectId
         ) mb  ON mb.ProjGUID =pp.p_projectId
         LEFT JOIN(
-            select 
-                r.ParentProjGUID AS ProjGUID,
-                SUM(CASE WHEN (DATEDIFF(YEAR,tr.CQsDate,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS sjqy,
-                SUM(CASE WHEN (DATEDIFF(YEAR,x_YeJiTime,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS yjrdqy,
-                SUM(
+                select 
+                    r.ParentProjGUID AS ProjGUID,
+                    SUM(CASE WHEN (DATEDIFF(YEAR,tr.CQsDate,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS sjqy,
+                    SUM(CASE WHEN (DATEDIFF(YEAR,x_YeJiTime,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS yjrdqy,	
+                    SUM(
                     CASE WHEN DATEDIFF(YEAR,tr.CQsDate, GETDATE())=0 THEN(
-                        CASE WHEN r.wndjTotal IS not null THEN r.wndjTotal/10000.0  
-                        WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea /10000.0 ELSE 0	 END)
+                    CASE WHEN r.wndjTotal IS not null THEN r.wndjTotal/10000.0  
+                    WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea /10000.0 ELSE 0	 END)
                     ELSE 0
                     END			
-                ) AS BnsjqyMoney, --实际签约金额汇总
-                SUM(
+                    ) AS BnsjqyMoney, --实际签约金额汇总
+
+                    SUM(
                     CASE WHEN DATEDIFF(YEAR,r.x_YeJiTime, GETDATE())=0 THEN(
-                        CASE WHEN  r.wndjTotal IS not null THEN r.wndjTotal/10000.0
-                        WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea/10000.0 ELSE 0	 END)
+                    CASE WHEN  r.wndjTotal IS not null THEN r.wndjTotal/10000.0
+                    WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea/10000.0 ELSE 0	 END)
                     ELSE 0 END			
-                ) AS BnyjMoney	--业绩认定签约金额汇总	
-            from data_wide_s_Room r
-            LEFT JOIN data_wide_mdm_building bld WITH(NOLOCK) ON  r.MasterBldGUID =bld.BuildingGUID 
-            inner JOIN data_wide_s_Trade tr WITH(NOLOCK)ON tr.RoomGUID = r.RoomGUID  AND  CStatus='激活' AND   tr.IsLast = 1
+                    ) AS BnyjMoney	--业绩认定签约金额汇总	
+                from data_wide_s_Room r
+                LEFT JOIN data_wide_mdm_building bld WITH(NOLOCK) ON  r.MasterBldGUID =bld.BuildingGUID 
+                inner JOIN  (
+                select  tr.RoomGUID,tr.TradeStatus,tr.IsLast,tr.TradeGUID,tr.CCjBldArea,tr.CCjRoomTotal,
+                CASE WHEN isnull(tr.x_InitialledDate,0)=0 and tr.CNetQsDate IS not null THEN  tr.CNetQsDate   
+                                WHEN isnull(tr.x_InitialledDate,0)=0 and isnull(tr.CNetQsDate,0)=0 THEN NULL  
+                            ELSE tr.x_InitialledDate END AS CQsDate
+                from data_wide_s_Trade tr WITH(NOLOCK)
+                )  tr ON tr.RoomGUID = r.RoomGUID  AND  tr.TradeStatus='激活' AND   tr.IsLast = 1
             where r.TopProductTypeName ='住宅' --只统计住宅				
             GROUP  BY  r.ParentProjGUID			
         ) bd on bd.ProjGUID=pp.p_projectId
@@ -410,10 +433,15 @@ BEGIN
             r.CjBldArea AS SignedArea
         from data_wide_s_room r
         LEFT JOIN data_wide_mdm_building bld WITH(NOLOCK) ON  r.MasterBldGUID =bld.BuildingGUID 
-        inner JOIN data_wide_s_Trade tr WITH(NOLOCK)ON tr.RoomGUID = r.RoomGUID  AND  CStatus='激活' AND   tr.IsLast = 1
-        where DATEDIFF(YEAR,tr.CQsDate,GETDATE())=0
-            AND r.TopProductTypeName ='住宅' --只统计住宅		
-            ;        
+        inner JOIN  (
+            select   CASE WHEN isnull(tr.x_InitialledDate,0)=0 and tr.CNetQsDate IS not null THEN  tr.CNetQsDate   
+                        WHEN isnull(tr.x_InitialledDate,0)=0 and isnull(tr.CNetQsDate,0)=0 THEN NULL  
+                    ELSE tr.x_InitialledDate END AS CQsDate, 
+                    RoomGUID,tr.TradeStatus,tr.IsLast,tr.TradeGUID,tr.CCjBldArea,tr.CCjRoomTotal,CStatus
+                    from   data_wide_s_Trade  tr WITH (NOLOCK)
+        ) tr ON tr.RoomGUID = r.RoomGUID  AND  CStatus='激活' AND   tr.IsLast = 1
+        where DATEDIFF(YEAR,tr.CQsDate,GETDATE())=0 
+        and r.TopProductTypeName ='住宅' --只统计住宅	      
 
         -- 记录执行成功
         UPDATE [dbo].[SnapshotExecutionLog]
