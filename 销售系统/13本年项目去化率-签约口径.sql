@@ -1,6 +1,5 @@
-
 -- DECLARE @date datetime =getdate() 
-select  
+select 
 tt.项目,
 tt.项目推广名称,
 tt.分期,
@@ -43,22 +42,31 @@ from
         pro.SpreadName as 项目推广名称,
         bld.stageName as 分期,
         bld.ProductTypeName as 业态,
-        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END  else 0 end) as 年初可售余货套数已定价,
-        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) then sr.bldarea else 0 end) as 年初可售余货面积已定价,
-        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) then isnull(isnull(st.ocjtotal,st.ccjtotal),sr.djtotal) else 0 end) as 年初可售余货货值已定价,
+        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) and isnull(sr.Total,0)<>0 then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END  else 0 end) as 年初可售余货套数已定价,
+        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) and isnull(sr.Total,0)<>0 then sr.bldarea else 0 end) as 年初可售余货面积已定价,
+        sum(case when year(bld.FactNotOpen)<year(getdate()) and (year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) or isnull(st.x_InitialledDate,st.CNetQsDate) is null) 
+        and isnull(sr.Total,0)<>0 then isnull(isnull(st.ccjtotal,st.ocjtotal),sr.djtotal) else 0 end) as 年初可售余货货值已定价,
         
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)<year(getdate()) then bld.SetNum+bld.CarNum else 0 end) as 年初可售余货套数未定价,
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)<year(getdate()) then bld.AvailableArea else 0 end) as 年初可售余货面积未定价,
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)<year(getdate()) then bld.SaleAmount else 0 end) as 年初可售余货货值未定价,
+        -- 标准总价为空或未建立房间都判定为未定价
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0 ) and year(bld.FactNotOpen)<year(getdate()) then 
+            case when sr.MasterBldGUID is null then   bld.SetNum+bld.CarNum else  case when  sr.Total is null  then  0 else  1 end  END END  ) as 年初可售余货套数未定价,
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0 ) and year(bld.FactNotOpen)<year(getdate()) then 
+            case when sr.MasterBldGUID is null then   bld.AvailableArea else  case when sr.Total is null then 0 else sr.bldarea end  end end ) as 年初可售余货面积未定价,
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0 ) and year(bld.FactNotOpen)<year(getdate()) 
+            then case when sr.MasterBldGUID is null then   bld.SaleAmount else  case when  sr.Total is null then 0 else sr.djtotal end  end end ) as 年初可售余货货值未定价,
 
-        sum(case when year(bld.FactNotOpen)=year(getdate()) then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END   else 0 end) as 本年新供货套数已定价,
-        sum(case when year(bld.FactNotOpen)=year(getdate()) then sr.bldarea else 0 end) as 本年新供货面积已定价,
-        sum(case when year(bld.FactNotOpen)=year(getdate()) then isnull(isnull(st.ocjtotal,st.ccjtotal),sr.djtotal) else 0 end) as 本年新供货货值已定价,
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)=year(getdate()) then bld.SetNum+bld.CarNum else 0 end) as 本年新供货套数未定价,
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)=year(getdate()) then bld.AvailableArea else 0 end) as 本年新供货面积未定价,
-        sum(case when sr.MasterBldGUID is null and year(bld.FactNotOpen)=year(getdate()) then bld.SaleAmount else 0 end) as 本年新供货货值未定价,
+        sum(case when year(bld.FactNotOpen)=year(getdate()) and isnull(sr.Total,0)<>0 then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END   else 0 end) as 本年新供货套数已定价,
+        sum(case when year(bld.FactNotOpen)=year(getdate()) and isnull(sr.Total,0)<>0 then sr.bldarea else 0 end) as 本年新供货面积已定价,
+        sum(case when year(bld.FactNotOpen)=year(getdate()) and isnull(sr.Total,0)<>0 then isnull(isnull(st.ccjtotal,st.ocjtotal),sr.djtotal) else 0 end) as 本年新供货货值已定价,
 
-        sum (case when year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END  else 0 end) as 本年已签约套数,
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0) and year(bld.FactNotOpen)=year(getdate()) then 
+            case when sr.MasterBldGUID is null then   bld.SetNum+bld.CarNum else  case when  sr.Total is null  then  0 else  1 end  end end ) as 本年新供货套数未定价,
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0) and year(bld.FactNotOpen)=year(getdate()) then 
+            case when sr.MasterBldGUID is null then   bld.AvailableArea else  case when sr.Total is null then 0 else sr.bldarea end  end end ) as 本年新供货面积未定价,
+        sum(case when (sr.MasterBldGUID is null or isnull(sr.Total,0)=0) and year(bld.FactNotOpen)=year(getdate()) then 
+            case when sr.MasterBldGUID is null then   bld.SaleAmount else  case when  sr.Total is null then 0 else sr.djtotal end  end end ) as 本年新供货货值未定价,
+
+        sum (case when year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) then CASE WHEN  sr.bldarea IS NULL   THEN 0 ELSE 1 END  else 0 end ) as 本年已签约套数,
         sum(case when year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) then sr.bldarea else 0 end) as 本年已签约面积,
         sum(case when year(isnull(st.x_InitialledDate,st.CNetQsDate))=year(getdate()) then st.ccjtotal else 0 end) as 本年已签约金额
         from data_wide_mdm_building bld 

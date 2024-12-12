@@ -34,8 +34,9 @@ from
     sum(case when year(bld.FactNotOpen)=year(@date) then sr.bldarea else 0 end) as 本年新供货面积,
     sum(case when year(bld.FactNotOpen)=year(@date) then sr.DjTotal else 0 end) as 本年新供货货值,
     sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then 1 else 0 end) as 本年认购套数,
-    sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then so.ocjbldarea else 0 end) as 本年认购面积,
-    sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then isnull(so.ocjTotal,so.ccjTotal) else 0 end) as 本年认购货值
+    -- sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then so.ocjbldarea else 0 end) as 本年认购面积,
+    sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then sr.bldarea else 0 end) as 本年认购面积,
+    sum(case when year(bld.FactNotOpen)<=year(@date) and year(so.ZcOrderDate)=year(@date) then isnull(so.ccjTotal,so.ocjTotal) else 0 end) as 本年认购货值
     from data_wide_s_room sr 
     left join data_wide_mdm_building bld on sr.MasterBldGUID=bld.BuildingGUID
     left join data_wide_s_trade so on sr.roomguid=so.roomguid and (so.ostatus='激活' or so.cstatus='激活')
