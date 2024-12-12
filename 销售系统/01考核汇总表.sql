@@ -61,13 +61,16 @@ LEFT JOIN(SELECT    ParentProjGUID AS ProjGUID ,
             GROUP BY ParentProjGUID
         ) xst ON pp.p_projectId = xst.ProjGUID
 INNER     JOIN(SELECT    r.ParentProjGUID AS ProjGUID ,
-                    SUM(ISNULL(tr.CCjBldArea, 0)) AS LjCCjBldArea ,
+                    -- SUM(ISNULL(tr.CCjBldArea, 0)) AS LjCCjBldArea ,
+                    SUM(ISNULL(r.bldarea, 0)) AS LjCCjBldArea ,
                     SUM(ISNULL(tr.CCjTotal, 0)) / 10000.0 AS LjCCjRoomTotal ,
                     COUNT(r.RoomGUID) AS LjCCCount,
-                    SUM(CASE WHEN r.TopProductTypeName ='住宅' AND  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  ) AS       ZzBnCCjBldArea ,
+                    -- SUM(CASE WHEN r.TopProductTypeName ='住宅' AND  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  ) AS       ZzBnCCjBldArea ,
+                    SUM(CASE WHEN r.TopProductTypeName ='住宅' AND  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(r.bldarea, 0) ELSE  0  END  ) AS       ZzBnCCjBldArea ,
                     SUM(CASE WHEN r.TopProductTypeName ='住宅' AND DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0  THEN  ISNULL(tr.CCjRoomTotal, 0)   ELSE  0 END  ) AS ZzBnCCjRoomTotal ,
                     CASE WHEN  SUM(CASE WHEN r.TopProductTypeName ='住宅' AND  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  ) =0  THEN 0 ELSE SUM(CASE WHEN r.TopProductTypeName ='住宅' AND DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0  THEN  ISNULL(tr.CCjRoomTotal, 0)   ELSE  0 END  ) / SUM(CASE WHEN r.TopProductTypeName ='住宅' AND  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  )  END  AS ZzBnCCjAvgPrice,
-                    SUM(CASE WHEN  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  ) AS BnCCjBldArea ,
+                    --SUM(CASE WHEN  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(tr.CCjBldArea, 0) ELSE  0  END  ) AS BnCCjBldArea ,
+                    SUM(CASE WHEN  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 THEN   ISNULL(r.bldarea, 0) ELSE  0  END  ) AS BnCCjBldArea ,
                     SUM(CASE WHEN  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0  THEN  ISNULL(tr.CCjTotal, 0) / 10000.0  ELSE  0 END  ) AS BnCCjRoomTotal ,
                     sum(CASE WHEN  DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0  THEN  1 ELSE  0 END  ) AS BnCCCount,
                     SUM(CASE WHEN DATEDIFF(YEAR, r.x_YeJiTime, GETDATE()) = 0 AND  sma.ApplyGUID IS NOT NULL THEN  1 ELSE  0 END  ) AS yqbgCount
@@ -109,8 +112,8 @@ LEFT  JOIN  (
             ELSE 0 END )
         END) AS BnQcchBldArea_QY, --签约口径本年期初库存	
             
-        SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 
-        THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_QY,
+        -- SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0  THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_QY,
+        SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0  THEN  r.bldarea ELSE  0 END  ) AS BnQCchCCjBldArea_QY,
         SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,tr.CQsDate, GETDATE() )  =0 
         THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_QY,
                                 
@@ -123,8 +126,8 @@ LEFT  JOIN  (
                 ELSE 0 END )
             END) AS BnQcchBldArea_YJ, --业绩口径本年期初库存	
                 
-        SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 
-          THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_YJ,
+        -- SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0  THEN  tr.CCjBldArea ELSE  0 END  ) AS BnQCchCCjBldArea_YJ,
+        SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0  THEN  r.bldarea ELSE  0 END  ) AS BnQCchCCjBldArea_YJ,
         SUM(CASE WHEN (DATEDIFF(YEAR, bld.FactNotOpen,GETDATE())> =1 )  and   DATEDIFF(YEAR,r.x_YeJiTime, GETDATE() )  =0 
           THEN isnull( tr.CCjRoomTotal,0) /10000.0 ELSE  0 END  ) AS BnQCchCCjRoomTotal_YJ  
     FROM data_wide_mdm_building bld WITH(NOLOCK)
