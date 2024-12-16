@@ -31,6 +31,7 @@ WHERE
   AND [ProviderRecord].[BUGUID] = @BUGUID;
 
 
+
 --查找合格供应商中服务公司包含“集团”和”城实公司“，且供应商为直接入库（供应商调整记录的”调整来源”为直接入库）
 SELECT p_Provider.ProviderGUID,
        p_Provider.ProviderName,
@@ -201,9 +202,15 @@ OUTER APPLY  (
 DROP TABLE #CTE;
 DROP TABLE #ZjrkProvider;
 
--------------------------------------------------------------------------
+--------------//////////////////修复SQL///////////////////////////--------------------------------------------
+-- 备份数据表
+select * into p_Provider2UnitAdjust_bak20241216 from p_Provider2UnitAdjust
+select * into p_Provider2Unit_bak20241216 from p_Provider2Unit
+select * into p_Provider2UnitHzDetail_bak20241216 from p_Provider2UnitHzDetail
+select  * into p_ProviderRecord_bak20241216 from p_ProviderRecord
 
--- -- 修复语句 @20241211 chenjw
+
+-- -- 修复语句 20241213 chenjw 优先处理14个需要迁移到珠江商管的供应商
 SELECT 
     p_Provider2Unit.Provider2UnitGUID,
     p_Provider2Unit.ProviderGUID,
@@ -213,45 +220,215 @@ SELECT
     bu.BUCode
     into #Provider2Unit
 FROM p_Provider2Unit 
-INNER JOIN p_Provider p 
-    ON p.ProviderGUID = p_Provider2Unit.ProviderGUID
-INNER JOIN myBusinessUnit bu 
-    ON bu.BUGUID = p_Provider2Unit.BUGUID
-WHERE bu.BUName = '城实公司'
-    AND p.ProviderGUID IN (
-        '265CDEE9-0E5B-4958-8E3C-AFC0D42B65BD',
-        '96D4B7A6-A1F6-4D81-8991-2AD74B814A41',
-        '3A12DF9A-B9A3-4C74-C61B-D64446F74EEA'
-    )
+INNER JOIN p_Provider p  ON p.ProviderGUID = p_Provider2Unit.ProviderGUID
+INNER JOIN myBusinessUnit bu   ON bu.BUGUID = p_Provider2Unit.BUGUID
+WHERE bu.BUName = '集团总部'
+and  p.providerguid in (
+  -- 'D01E0F6E-6829-E711-B3D4-40F2E92B3FDD'
+  '3A0FE0A6-FF7A-5433-E9D1-9D1AD5F6E237',
+  '3A0F971D-0753-73BE-6AD9-E66FE9BA65E7',
+  '3A0C7A30-02FF-6163-FE26-90F1D17F6B53',
+  '3A0DB5C0-627C-B848-C58B-D6BBFA7AE057',
+  '3A0CC21F-36FC-8579-DB89-51B0920D7139',
+  '3A0DC8E0-98C8-7189-0FC3-5803B90D9ECD',
+  '3A0DBFBD-BE33-BA8C-32C3-7A98B92D8B00',
+  '3A0BCBEC-13FF-B971-0283-F7F8D3A35992',
+  '3A0CC15C-5D97-E2BE-C42B-7BCBE3F2EBDB',
+  '3A0EEE21-A2D2-F28E-ADF5-6944519B58D9',
+  '3A0EC921-5C0C-010A-C1A7-34FCD27A52EC',
+  '3A0C7A4D-975D-4BF9-E137-324498B5F499',
+  '3A0CC7D4-DF94-C1D5-9E7B-5E1CAAF3D6C9',
+  '3A0C7A44-45AE-2ABA-94F1-3D2CE1948160'
+)
 
--- 删除p_Provider2UnitAdjust
-delete p_Provider2UnitAdjust
--- select p_Provider2UnitAdjust.*
-from  #Provider2Unit 
-inner join p_Provider2UnitAdjust p_Provider2UnitAdjust on p_Provider2Unit.Provider2UnitGUID = p_Provider2UnitAdjust.Provider2UnitGUID
-where p_Provider2Unit.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
 
--- 删除 p_Provider2Unit
-delete p_Provider2Unit
--- select p_Provider2Unit.*
-from  #Provider2Unit 
-inner join p_Provider2Unit p_Provider2Unit on #Provider2Unit.Provider2UnitGUID = p_Provider2Unit.Provider2UnitGUID
-where p_Provider2Unit.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+-- -- 删除服务公司调整记录 p_Provider2UnitAdjust
+-- delete b
+-- -- select a.*
+-- from  #Provider2Unit a
+-- inner join p_Provider2UnitAdjust b on a.Provider2UnitGUID = b.Provider2UnitGUID
+-- where a.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+
+-- 删除 供应商所属集团总部服务公司的记录 p_Provider2Unit
+delete b
+--SELECT DISTINCT  b.ProviderGUID
+from  #Provider2Unit a
+inner join p_Provider2Unit b on a.Provider2UnitGUID = b.Provider2UnitGUID
+where b.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+
+
+-- 将珠江商管插入服务公司
+DECLARE @UserGUID uniqueidentifier
+DECLARE @UserName nvarchar(50)
+DECLARE @NewBUGUID uniqueidentifier -- 新公司GUID
+
+select  @NewBUGUID=BUGUID from  myBusinessUnit  where  BUName ='珠江商管'
+SELECT  @UserGUID = UserGUID ,@UserName = UserName FROM  dbo.myuser WHERE  UserCode ='admin'
+
+INSERT  INTO dbo.p_Provider2Unit
+(
+    CreatedGUID,
+    CreatedName,
+    CreatedTime,
+    ModifiedGUID,
+    ModifiedName,
+    ModifiedTime,
+    Provider2UnitGUID,
+    ProviderGUID,
+    BUGUID,
+    HzStatus
+)
+SELECT  
+    @UserGUID AS  CreatedGUID,
+    @UserName AS  CreatedName,
+    GETDATE() AS  CreatedTime,
+    @UserGUID AS  ModifiedGUID,
+    @UserName AS  ModifiedName,
+    GETDATE() AS  ModifiedTime,
+    newid() AS  Provider2UnitGUID,
+    a.ProviderGUID,
+    @NewBUGUID as BUGUID,
+    0 AS  HzStatus
+FROM #Provider2Unit a
+LEFT JOIN  (
+   SELECT  ProviderGUID,COUNT(1) AS UnitNUm  
+   FROM  p_Provider2Unit 
+   WHERE BUGUID ='30e3b6af-6521-44c1-31d6-08da4991e890'  -- 珠江商管
+   GROUP BY  ProviderGUID 
+) b ON a.ProviderGUID =b.ProviderGUID
+ WHERE  b.ProviderGUID IS NULL 
+
+
+
+--修改p_ProviderRecord 表上的 BUGUID
+UPDATE  a
+SET  a.BUGUID ='30e3b6af-6521-44c1-31d6-08da4991e890'  -- 珠江商管
+-- select  a.*
+FROM  p_ProviderRecord a
+inner join  #Provider2Unit b on a.ProviderGUID =b.ProviderGUID
+WHERE  a.BUGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+
+
 
 --修改p_Provider2UnitHzDetail
-update p_Provider2UnitHzDetail
-set HzStatus = 0
-from  #Provider2Unit 
-inner join p_Provider2UnitHzDetail p_Provider2UnitHzDetail on #Provider2Unit.Provider2UnitGUID = p_Provider2UnitHzDetail.Provider2UnitGUID
-where p_Provider2Unit.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+update b  
+   set b.BUGUID ='30e3b6af-6521-44c1-31d6-08da4991e890',  -- 珠江商管
+   b.HtBUGUID = '30e3b6af-6521-44c1-31d6-08da4991e890'  -- 珠江商管 
+--select  b.*
+from  #Provider2Unit a
+inner join p_Provider2UnitHzDetail b on a.ProviderGUID = b.ProviderGUID AND  b.BUGUID = a.BUGUID
+where a.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+
+--修改p_provider 表上的冗余字段 ProviderUnitGUIDList ProviderUnitNameList
+UPDATE a
+SET   a.ProviderUnitGUIDList = REPLACE(a.ProviderUnitGUIDList, '2d08d5ea-6ff0-e311-9029-40f2e92b3fdd', '30e3b6af-6521-44c1-31d6-08da4991e890'),
+      a.ProviderUnitNameList = REPLACE(a.ProviderUnitNameList, '集团总部', '珠江商管')
+--SELECT  a.ProviderUnitGUIDList, a.ProviderUnitNameList,
+--REPLACE(ProviderUnitGUIDList, '2d08d5ea-6ff0-e311-9029-40f2e92b3fdd', '30e3b6af-6521-44c1-31d6-08da4991e890') AS ProviderUnitGUIDListNew,
+--REPLACE(ProviderUnitNameList, '集团总部', '珠江商管') AS ProviderUnitNameListNew
+FROM  p_provider a
+INNER JOIN #Provider2Unit b ON a.ProviderGUID = b.ProviderGUID 
+WHERE 1=1
 
 
 
+-- ---测试删除 广东永旺天河城商业有限公司 供应商服务公司后查询不了的问题
+-- delete b
+-- --SELECT DISTINCT  b.ProviderGUID
+-- from  #Provider2Unit a
+-- inner join p_Provider2Unit b on a.Provider2UnitGUID = b.Provider2UnitGUID
+-- where b.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+-- and  b.ProviderGUID ='3A10140F-3601-1D13-AB95-51F82AD06AD7' -- 广东永旺天河城商业有限公司
+
+-- INSERT INTO  p_Provider2Unit (
+--     CreatedGUID,
+--     CreatedName,
+--     CreatedTime,
+--     ModifiedGUID,
+--     ModifiedName,
+--     ModifiedTime,
+--     Provider2UnitGUID,
+--     ProviderGUID,
+--     BUGUID,
+--     HzStatus
+-- )
+-- SELECT  CreatedGUID,
+--     CreatedName,
+--     CreatedTime,
+--     ModifiedGUID,
+--     ModifiedName,
+--     ModifiedTime,
+--     Provider2UnitGUID,
+--     ProviderGUID,
+--     BUGUID,
+--     HzStatus FROM  p_Provider2Unit_bak20241213 b
+-- where b.BuGUID ='2d08d5ea-6ff0-e311-9029-40f2e92b3fdd' -- 集团总部
+-- and  b.ProviderGUID ='3A10140F-3601-1D13-AB95-51F82AD06AD7'
 
 
+--修改p_provider 表上的冗余字段 ProviderUnitGUIDList ProviderUnitNameList
+-- UPDATE p_provider
+-- SET   ProviderUnitGUIDList ='30e3b6af-6521-44c1-31d6-08da4991e890' ,ProviderUnitNameList ='珠江商管'
+-- FROM  p_provider where  ProviderGUID ='3A10140F-3601-1D13-AB95-51F82AD06AD7'
 
 
+-- --修改p_ProviderRecord 表上的 BUGUID
+-- UPDATE  p_ProviderRecord
+-- SET BUGUID ='30e3b6af-6521-44c1-31d6-08da4991e890' 
+-- FROM  p_ProviderRecord  WHERE  ProviderGUID ='3A10140F-3601-1D13-AB95-51F82AD06AD7'
 
-p_Provider2UnitAdjust
-p_Provider2Unit
-p_Provider2UnitHzDetail
+--删除以后查询不到了供应商
+-- INSERT INTO  dbo.p_Provider2Unit
+-- (
+--     CreatedGUID,
+--     CreatedName,
+--     CreatedTime,
+--     ModifiedGUID,
+--     ModifiedName,
+--     ModifiedTime,
+--     Provider2UnitGUID,
+--     ProviderGUID,
+--     BUGUID,
+--     HzStatus
+-- )
+-- select  
+--     a.CreatedGUID,
+--     a.CreatedName,
+--     a.CreatedTime,
+--     a.ModifiedGUID,
+--     a.ModifiedName,
+--     a.ModifiedTime,
+--     a.Provider2UnitGUID,
+--     a.ProviderGUID,
+--     a.BUGUID,
+--     a.HzStatus
+-- 	FROM  p_Provider2Unit_bak20241213 a
+-- inner join  #Provider2Unit b on a.ProviderGUID = b.ProviderGUID
+-- where  not exists (
+--        select 1 from  p_Provider2Unit p where p.Provider2UnitGUID = a.Provider2UnitGUID
+--      )
+
+    -- AND p.ProviderGUID IN (
+    --   'D01E0F6E-6829-E711-B3D4-40F2E92B3FDD',
+    --   '3A0FE0A6-FF7A-5433-E9D1-9D1AD5F6E237',
+    --   -- '3A10140F-3601-1D13-AB95-51F82AD06AD7',
+    --   '3A0F971D-0753-73BE-6AD9-E66FE9BA65E7',
+    --   '7A525B46-70F2-E511-9F09-40F2E92B3FDD',
+    --   '3A0C7A30-02FF-6163-FE26-90F1D17F6B53',
+    --   '3A0DB5C0-627C-B848-C58B-D6BBFA7AE057',
+    --   '12BE934B-89BA-E511-B4AF-40F2E92B3FDD',
+    --   '706A8359-7E9B-4AAB-97D5-8A4C6A824187',
+    --   '3A0CC21F-36FC-8579-DB89-51B0920D7139',
+    --   '3A0DC8E0-98C8-7189-0FC3-5803B90D9ECD',
+    --  -- '39FD9BB2-2BEB-EDA8-B2A1-07E391B130CE',
+    --   '1A96BAA2-425D-426E-8759-1FF8B1FC083A',
+    --   '3A0DBFBD-BE33-BA8C-32C3-7A98B92D8B00',
+    --   '3A0CA24C-FA30-61F1-4B70-A8E47A27BE32',
+    --   '3A0BCBEC-13FF-B971-0283-F7F8D3A35992',
+    --   '3A0CC15C-5D97-E2BE-C42B-7BCBE3F2EBDB',
+    --   '3A0EEE21-A2D2-F28E-ADF5-6944519B58D9',
+    --   '3A0EC921-5C0C-010A-C1A7-34FCD27A52EC',
+    --   '3A0C7A4D-975D-4BF9-E137-324498B5F499',
+    --   '3A0CC7D4-DF94-C1D5-9E7B-5E1CAAF3D6C9',
+    --   '3A0C7A44-45AE-2ABA-94F1-3D2CE1948160'
+    -- )
