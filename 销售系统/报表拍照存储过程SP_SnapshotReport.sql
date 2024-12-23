@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/11 11:40:50 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/23 19:34:03 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -241,17 +241,17 @@ BEGIN
                 SUM(CASE WHEN (DATEDIFF(YEAR,tr.CQsDate,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS sjqy,
                 SUM(CASE WHEN (DATEDIFF(YEAR,x_YeJiTime,GetDate())=0 and bld.TopProductTypeName='住宅')	THEN CjRmbTotal/10000.0 ELSE 0 END) AS yjrdqy,	
                 SUM(
-                CASE WHEN DATEDIFF(YEAR,tr.CQsDate, GETDATE())=0 THEN(
-                CASE WHEN r.wndjTotal IS not null THEN r.wndjTotal/10000.0  
-                WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea /10000.0 ELSE 0	 END)
-                ELSE 0
-                END			
+                    CASE WHEN DATEDIFF(YEAR,tr.CQsDate, GETDATE())=0 THEN
+                    (CASE  WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea /10000.0
+                    WHEN r.wndjTotal IS not null THEN r.wndjTotal / 10000.0  ELSE 0	 END )
+                    ELSE 0
+                    END			
                 ) AS BnsjqyMoney, --实际签约金额汇总
 
-                SUM(
-                CASE WHEN DATEDIFF(YEAR,r.x_YeJiTime, GETDATE())=0 THEN(
-                CASE WHEN  r.wndjTotal IS not null THEN r.wndjTotal/10000.0
-                WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea/10000.0 ELSE 0	 END)
+                SUM( CASE WHEN DATEDIFF(YEAR,r.x_YeJiTime, GETDATE())=0 THEN(
+                CASE WHEN  DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0 THEN bld.TargetUnitPrice*r.CjBldArea/10000.0 
+                WHEN  r.wndjTotal IS not null THEN r.wndjTotal/10000.0
+                ELSE 0	 END)
                 ELSE 0 END			
                 ) AS BnyjMoney	--业绩认定签约金额汇总	
             from data_wide_s_Room r
@@ -348,7 +348,9 @@ BEGIN
             r.RoomGUID AS 房间编号,
             r.RoomInfo AS 房间信息,
             r.CjRmbTotal AS 成交总价,
-            r.wndjTotal AS 往年最后一次定价金额,
+            case when DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0  then bld.TargetUnitPrice * r.CjBldArea 
+             when r.wndjTotal IS not null then r.wndjTotal  else 0 end as 往年最后一次定价金额,
+            --r.wndjTotal AS 往年最后一次定价金额,
             bld.TargetUnitPrice AS 目标均价,
             r.CjBldArea AS 签约面积
         FROM data_wide_s_room r
@@ -433,7 +435,9 @@ BEGIN
             r.RoomGUID,
             r.RoomInfo,
             r.CjRmbTotal AS TotalPrice,
-            r.wndjTotal AS LastYearPrice,
+            --r.wndjTotal AS LastYearPrice,
+            case when DATEDIFF(YEAR,bld.FactNotOpen,GETDATE())=0  then bld.TargetUnitPrice*r.CjBldArea 
+             when r.wndjTotal IS not null then r.wndjTotal  else 0 end as LastYearPrice,
             bld.TargetUnitPrice,
             r.CjBldArea AS SignedArea
         from data_wide_s_room r
