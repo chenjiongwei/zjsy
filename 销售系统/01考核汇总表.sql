@@ -1,3 +1,6 @@
+-- alter table result_kh_zb_snapshot add  当年签约延期付款变更次数 int 
+-- alter table result_kh_zb_snapshot add  当年销售合同总套数 int 
+
 --ZSDC-01-考核指标完成情况
 IF  @版本号='实时' 
 BEGIN
@@ -51,6 +54,9 @@ SELECT
     */			
     case when BnsjqyMoney=0 then 0 else (sjqy-BnsjqyMoney)/BnsjqyMoney end AS 货值变动率1,
     case when BnyjMoney=0 then 0 else (yjrdqy-BnyjMoney)/BnyjMoney end AS 货值变动率2,
+    --延期付款变更率=当年签约房源（业绩口径）申请延期付款变更套数÷当年销售合同总套数（业绩口径）×100%
+    ISNULL(yqbgCount,0) as 当年签约延期付款变更次数,
+    ISNULL(BnCCCount,0) as 当年销售合同总套数,
     CASE WHEN  ISNULL( BnCCCount,0) =0 THEN  0 ELSE ISNULL(yqbgCount,0) * 1.0 / ISNULL(BnCCCount,0) END  AS 延期付款变更率
 FROM    data_wide_mdm_Project pp
 LEFT JOIN(SELECT    ParentProjGUID AS ProjGUID ,
@@ -234,7 +240,9 @@ BEGIN
         [本年业绩认定底价金额汇总],
         [货值变动率1],
         [货值变动率2],
-        [延期付款变更率]
+        [延期付款变更率],
+        [当年签约延期付款变更次数],
+        [当年销售合同总套数]
     from result_kh_zb_snapshot
     where [version] = @版本号
         and [p_projectId] in (@ProjGUID)

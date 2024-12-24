@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/23 19:34:03 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/24 12:00:36 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -92,7 +92,9 @@ BEGIN
             [本年业绩认定底价金额汇总],
             [货值变动率1],
             [货值变动率2],
-            [延期付款变更率]
+            [延期付款变更率],
+            [当年签约延期付款变更次数],
+            [当年销售合同总套数]
         )
         SELECT 
             GETDATE() AS snapshot_time,
@@ -134,6 +136,9 @@ BEGIN
             bd.BnyjMoney AS 本年业绩认定底价金额汇总,
             CASE WHEN bd.BnsjqyMoney = 0 THEN 0 ELSE (bd.sjqy-bd.BnsjqyMoney)/bd.BnsjqyMoney END AS 货值变动率1,
             CASE WHEN bd.BnyjMoney = 0 THEN 0 ELSE (bd.yjrdqy-bd.BnyjMoney)/bd.BnyjMoney END AS 货值变动率2,
+           --延期付款变更率=当年签约房源（业绩口径）申请延期付款变更套数÷当年销售合同总套数（业绩口径）×100%
+            ISNULL(con.yqbgCount,0) as 当年签约延期付款变更次数,
+            ISNULL(con.BnCCCount,0) as 当年销售合同总套数,
             CASE WHEN ISNULL(con.BnCCCount,0) = 0 THEN 0 ELSE ISNULL(con.yqbgCount,0) * 1.0/ISNULL(con.BnCCCount,0) END AS 延期付款变更率
         FROM data_wide_mdm_Project pp
        LEFT JOIN(SELECT    ParentProjGUID AS ProjGUID ,

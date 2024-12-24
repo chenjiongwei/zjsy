@@ -1,7 +1,11 @@
+declare @var_begindate date = '2024-01-01'
+declare @var_enddate date = '2024-12-31'
+
 SELECT * FROM
 (SELECT SUM(招标总额)/10000 AS 招标总额
 	,SUM(核采总额)/10000 AS 核采总额
 	,SUM(非平台公司)/10000 AS 非平台公司招标总额
+    --核采率=核采总额/(核采总额+集采平台采购总额+非集采平台采购总额)
 	,iif((SUM(核采总额)+SUM(招标总额)+SUM(非平台公司))<>0,SUM(核采总额)/(SUM(核采总额)+SUM(招标总额)+SUM(非平台公司)),0) * 100 AS 核采率
 	,iif((SUM(核采总额)+SUM(招标总额)+SUM(非平台公司))<>0,SUM(核采总额)/(SUM(核采总额)+SUM(招标总额)+SUM(非平台公司)),0)  AS 核采率1
 FROM (
@@ -18,7 +22,8 @@ FROM (
 		AND CS.IsTacticCg = 0 -- 非战采
 		AND WB.STATUS = 2 -- 定标已审核
 		-- AND Year(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime when CS.realEndTime is not null then CS.realEndTime  else CS.PlanEndTime end) = YEAR(GETDATE())
-		AND convert(date,(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime when CS.realEndTime is not null then CS.realEndTime  else CS.PlanEndTime end),23) between @var_begindate and @var_enddate
+		AND convert(date,(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime 
+        when CS.realEndTime is not null then CS.realEndTime  else CS.PlanEndTime end),23) between @var_begindate and @var_enddate
 		AND CS.x_IsEntrustBid=1 
 
     UNION ALL
@@ -35,7 +40,8 @@ FROM (
 		AND CS.IsTacticCg = 0 -- 非战采
 		AND WB.STATUS = 2 -- 定标已审核
 		-- AND Year(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime when CS.realEndTime is not null then CS.realEndTime  else CS.PlanEndTime end) = YEAR(GETDATE())
-		AND convert(date,(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime when CS.realEndTime is not null then CS.realEndTime  else CS.PlanEndTime end),23) between @var_begindate and @var_enddate
+		AND convert(date,(CASE WHEN WB.ApproveTime is not null then WB.ApproveTime when CS.realEndTime is not null 
+        then CS.realEndTime  else CS.PlanEndTime end),23) between @var_begindate and @var_enddate
 		AND (CS.x_IsEntrustBid<>1 or CS.x_IsEntrustBid is null)
 	
 	UNION ALL
