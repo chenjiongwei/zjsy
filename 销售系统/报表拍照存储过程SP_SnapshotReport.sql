@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/24 12:00:36 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/25 11:50:19 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -19,6 +19,17 @@ GO
 7. 实收款项明细表(全表)-含回款到账日期 (Result_ReceivedPaymentDetail)
 8. 本年至今回笼金额明细表 (Result_ThisYearGetAmountDetail)
 */
+
+--删除历史数据
+DECLARE @SnapshotTime datetime = '2024-12-11';
+DELETE FROM [dbo].[result_kh_zb_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+DELETE FROM [dbo].[result_room_yjrd_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+DELETE FROM [dbo].[Result_YearlySignedRooms] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+DELETE FROM [dbo].[Result_ProjectSigningPaymentSummary] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+DELETE FROM [dbo].[Result_RoomLedgerDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+DELETE FROM [dbo].[Result_UnpaidAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0 ;
+DELETE FROM [dbo].[Result_ReceivedPaymentDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+DELETE FROM [dbo].[Result_ThisYearGetAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
 
 -- 创建存储过程
 ALTER   PROCEDURE [dbo].[SP_SnapshotReport]
