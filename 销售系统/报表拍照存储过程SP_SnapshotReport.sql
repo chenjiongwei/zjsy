@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2024/12/25 11:50:19 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/2 15:03:38 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -21,15 +21,15 @@ GO
 */
 
 --删除历史数据
-DECLARE @SnapshotTime datetime = '2024-12-11';
-DELETE FROM [dbo].[result_kh_zb_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
-DELETE FROM [dbo].[result_room_yjrd_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
-DELETE FROM [dbo].[Result_YearlySignedRooms] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
-DELETE FROM [dbo].[Result_ProjectSigningPaymentSummary] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
-DELETE FROM [dbo].[Result_RoomLedgerDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
-DELETE FROM [dbo].[Result_UnpaidAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0 ;
-DELETE FROM [dbo].[Result_ReceivedPaymentDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
-DELETE FROM [dbo].[Result_ThisYearGetAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+-- DECLARE @SnapshotTime datetime = '2024-12-11';
+-- DELETE FROM [dbo].[result_kh_zb_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[result_room_yjrd_snapshot] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[Result_YearlySignedRooms] WHERE datediff(day,snapshot_time,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[Result_ProjectSigningPaymentSummary] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[Result_RoomLedgerDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[Result_UnpaidAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0 ;
+-- DELETE FROM [dbo].[Result_ReceivedPaymentDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
+-- DELETE FROM [dbo].[Result_ThisYearGetAmountDetail] WHERE datediff(day,SnapshotTime,@SnapshotTime) =0;
 
 -- 创建存储过程
 ALTER   PROCEDURE [dbo].[SP_SnapshotReport]
@@ -1548,7 +1548,8 @@ BEGIN
             实际交房日期,
             放款银行,
             首次结转日期,
-            入账日期
+            入账日期,
+            是否输出NCC
         )
         SELECT 
             GETDATE() AS SnapshotTime,
@@ -1637,7 +1638,8 @@ BEGIN
             g.Jkr AS 交款人,  tr.YjfDate AS 预计交房日期 ,tr.SjjfDate AS 实际交房日期,
             NULL AS 放款银行,
             tr.HtCarryoverDate as 首次结转日期,
-            g.rzdate as 入账日期
+            g.rzdate as 入账日期,
+            case when  isnull( g.IsExport,0) =0  then '否' else  '是' end as 是否输出NCC
         FROM    dbo.data_wide_s_Getin g WITH(NOLOCK)
         INNER JOIN dbo.data_wide_mdm_Project p WITH(NOLOCK)ON p.p_projectId = g.ProjGUID
         INNER JOIN data_wide_mdm_Project pp WITH(NOLOCK)ON p.ParentGUID = pp.p_projectId AND   pp.Level = 2

@@ -36,7 +36,7 @@ BEGIN
     SELECT CASE
                 WHEN ISNULL(pp.SpreadName, '') = '' THEN pp.ProjName
                 ELSE pp.SpreadName END AS 项目推广名,
-		   f.TradeGUID,
+	      f.TradeGUID,
            p.ProjShortName AS 分区名称,
            f.BldName AS 楼栋名称,
            f.UnitNo AS 单元,
@@ -111,17 +111,9 @@ BEGIN
                 WHEN DATEDIFF(DAY, f.LastDate, sk.SkDate) > 0
                  THEN sk.znjRmbAmount END AS 已交款应计滞纳金参考,
            -- 滞纳金收款情况
-           CASE
-                WHEN DATEDIFF(DAY, f.LastDate, sk.SkDate) > 0
-                  THEN sk.znjRmbAmount
-                ELSE 0 END + ISNULL(CASE
-                                         WHEN DATEDIFF(DAY, f.LastDate, GETDATE()) > 0
-                                          AND f.RmbYe > 0 THEN f.RmbYe END,
-                                    0) * ISNULL(znj.FineRate / 100.0, 0)
-           * ISNULL(CASE
-                         WHEN DATEDIFF(DAY, f.LastDate, GETDATE()) > 0
-                          AND f.RmbYe > 0 THEN DATEDIFF(DAY, f.LastDate, GETDATE()) END,
-                    0) AS 应收违约金金额
+           convert(decimal(18,2), CASE WHEN DATEDIFF(DAY, f.LastDate, sk.SkDate) > 0 THEN sk.znjRmbAmount ELSE 0 END + ISNULL(CASE WHEN DATEDIFF(DAY, f.LastDate, GETDATE()) > 0  AND f.RmbYe > 0 THEN f.RmbYe END,0) 
+           * ISNULL(znj.FineRate / 100.0, 0)
+           * ISNULL(CASE WHEN DATEDIFF(DAY, f.LastDate, GETDATE()) > 0 AND f.RmbYe > 0 THEN DATEDIFF(DAY, f.LastDate, GETDATE()) END, 0) ) AS 应收违约金金额
            --ISNULL(f.RmbAmount, 0) + ISNULL(f.RmbDsAmount, 0) - ISNULL(f.RmbYe, 0) AS 已交款,
            --CASE
            --     WHEN f.ItemName = '滞纳金' THEN f.RmbAmount END AS 已产生滞纳金,
@@ -129,20 +121,16 @@ BEGIN
            --NULL AS 未收滞纳金,
            --f.JmLateFee AS 累计已减免滞纳金,
            --znj.参考滞纳金
-	  INTO #znj  
+	INTO #znj  
       FROM data_wide_s_Fee f WITH (NOLOCK)
 	  --INNER JOIN  #ExistsZnj  z ON z.TradeGUID =f.TradeGUID
-     INNER JOIN dbo.data_wide_mdm_Project p WITH (NOLOCK)
-        ON p.p_projectId = f.ProjGUID
-     INNER JOIN data_wide_mdm_Project pp WITH (NOLOCK)
-        ON p.ParentGUID = pp.p_projectId
+     INNER JOIN dbo.data_wide_mdm_Project p WITH (NOLOCK) ON p.p_projectId = f.ProjGUID
+     INNER JOIN data_wide_mdm_Project pp WITH (NOLOCK)  ON p.ParentGUID = pp.p_projectId
        AND pp.Level = 2
-     INNER JOIN data_wide_s_Trade tr WITH (NOLOCK)
-        ON tr.RoomGUID = f.RoomGUID
+     INNER JOIN data_wide_s_Trade tr WITH (NOLOCK)  ON tr.RoomGUID = f.RoomGUID
        AND tr.IsLast = 1
        AND f.TradeGUID = tr.TradeGUID
-     INNER JOIN dbo.data_wide_s_Room r WITH (NOLOCK)
-        ON r.RoomGUID = f.RoomGUID
+     INNER JOIN dbo.data_wide_s_Room r WITH (NOLOCK)  ON r.RoomGUID = f.RoomGUID
    /*  OUTER APPLY (SELECT g.SaleGUID,
                          g.ItemNameGUID,
                          MAX(g.SkDate) AS SkDate,
