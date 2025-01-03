@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/2 15:03:38 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/3 16:55:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON

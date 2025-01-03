@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_s_项目销售周报]    Script Date: 2024/12/11 14:08:36 ******/
+/****** Object:  StoredProcedure [dbo].[usp_s_项目销售周报]    Script Date: 2025/1/3 16:32:53 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -16,6 +16,7 @@ BEGIN
 
 set  @var_enddate=convert(varchar(10),@var_enddate,120)+' 23:59:59' 
 
+-- 来电来访
 select tt.* into  #来访来电 from 
 (
 select 
@@ -62,6 +63,7 @@ group by
 op.projguid
 ) tt
 
+-- 认购情况
 select tt.* into  #认购情况 from  
 (
 select 
@@ -69,12 +71,15 @@ so.projguid,
 so.TopProductTypeName as 业态,
 '本周新增' as 周期,
 sum(1) as 认购套数,	
-sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+-- sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+sum(isnull(sr.bldarea,0)) as 认购面积,
 sum(isnull(so.ccjtotal,so.ocjtotal)) as 认购金额,
 sum(case when so.ordertype='预选' then 1 else 0 end) as 预选套数,	
-sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+-- sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+sum(case when so.ordertype='预选' then isnull(sr.bldarea,0) else 0 end) as 预选面积,
 sum(case when so.ordertype='预选' then isnull(so.ocjtotal,so.ccjtotal) else 0 end) as 预选金额
 from data_wide_s_trade so 
+left join data_wide_s_room sr on so.roomguid=sr.roomguid
 where (so.ostatus='激活' or so.cstatus='激活')
 and datediff(ww,so.ZcOrderDate-1,@var_enddate-1)=0
 group by 
@@ -86,12 +91,15 @@ so.projguid,
 so.TopProductTypeName as 业态,
 '本月' as 周期,
 sum(1) as 认购套数,	
-sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+-- sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+sum(isnull(sr.bldarea,0)) as 认购面积,
 sum(isnull(so.ccjtotal,so.ocjtotal)) as 认购金额,
 sum(case when so.ordertype='预选' then 1 else 0 end) as 预选套数,	
-sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+-- sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+sum(case when so.ordertype='预选' then isnull(sr.bldarea,0) else 0 end) as 预选面积,
 sum(case when so.ordertype='预选' then isnull(so.ocjtotal,so.ccjtotal) else 0 end) as 预选金额
 from data_wide_s_trade so 
+left join data_wide_s_room sr on so.roomguid=sr.roomguid
 where (so.ostatus='激活' or so.cstatus='激活')
 and datediff(mm,so.ZcOrderDate,@var_enddate)=0
 group by 
@@ -103,12 +111,15 @@ so.projguid,
 so.TopProductTypeName as 业态,
 '本年' as 周期,
 sum(1) as 认购套数,	
-sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+-- sum(isnull(so.ocjbldarea,so.ccjbldarea)) as 认购面积,
+sum(isnull(sr.bldarea,0)) as 认购面积,
 sum(isnull(so.ccjtotal,so.ocjtotal)) as 认购金额,
 sum(case when so.ordertype='预选' then 1 else 0 end) as 预选套数,	
-sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+-- sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+sum(case when so.ordertype='预选' then isnull(sr.bldarea,0) else 0 end) as 预选面积,
 sum(case when so.ordertype='预选' then isnull(so.ocjtotal,so.ccjtotal) else 0 end) as 预选金额
 from data_wide_s_trade so 
+left join data_wide_s_room sr on so.roomguid=sr.roomguid
 where (so.ostatus='激活' or so.cstatus='激活')
 and datediff(yy,so.ZcOrderDate,@var_enddate)=0
 group by 
@@ -120,12 +131,15 @@ so.projguid,
 so.TopProductTypeName as 业态,
 '全盘' as 周期,
 sum(1) as 认购套数,	
-sum(isnull(so.ccjbldarea,so.ocjbldarea)) as 认购面积,
+-- sum(isnull(so.ccjbldarea,so.ocjbldarea)) as 认购面积,
+sum(isnull(sr.bldarea,0)) as 认购面积,
 sum(isnull(so.ccjtotal,so.ocjtotal)) as 认购金额,
 sum(case when so.ordertype='预选' then 1 else 0 end) as 预选套数,	
-sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+-- sum(case when so.ordertype='预选' then isnull(so.ocjbldarea,so.ccjbldarea) else 0 end) as 预选面积,
+sum(case when so.ordertype='预选' then isnull(sr.bldarea,0) else 0 end) as 预选面积,
 sum(case when so.ordertype='预选' then isnull(so.ocjtotal,so.ccjtotal) else 0 end) as 预选金额
 from data_wide_s_trade so 
+left join data_wide_s_room sr on so.roomguid=sr.roomguid
 where (so.ostatus='激活' or so.cstatus='激活')
 group by 
 so.projguid,
@@ -139,9 +153,11 @@ tf.projguid,
 tf.TopProductTypeName as 业态,
 '本周新增' as 周期,
 sum(1) as 认购退房套数,	
-sum(tf.ocjbldarea) as 认购退房面积,
+-- sum(tf.ocjbldarea) as 认购退房面积,
+sum(isnull(sr.bldarea,0)) as 认购退房面积,
 sum(tf.ocjtotal) as 认购退房金额
 from data_wide_s_trade tf 
+left join data_wide_s_room sr on tf.roomguid=sr.roomguid
 where year(tf.ZcOrderDate)=year(@var_enddate)
 and datediff(ww,tf.ocloseDate-1,@var_enddate-1)=0
 and tf.oclosereason='退房'
@@ -154,9 +170,11 @@ tf.projguid,
 tf.TopProductTypeName as 业态,
 '本月' as 周期,
 sum(1) as 认购退房套数,	
-sum(tf.ocjbldarea) as 认购退房面积,
+-- sum(tf.ocjbldarea) as 认购退房面积,
+sum(isnull(sr.bldarea,0)) as 认购退房面积,
 sum(tf.ocjtotal) as 认购退房金额
 from data_wide_s_trade tf 
+left join data_wide_s_room sr on tf.roomguid=sr.roomguid
 where year(tf.ZcOrderDate)=year(@var_enddate)
 and datediff(mm,tf.ocloseDate,@var_enddate)=0
 and tf.oclosereason='退房'
@@ -169,9 +187,11 @@ tf.projguid,
 tf.TopProductTypeName as 业态,
 '本年' as 周期,
 sum(1) as 认购退房套数,	
-sum(tf.ocjbldarea) as 认购退房面积,
+-- sum(tf.ocjbldarea) as 认购退房面积,
+sum(isnull(sr.bldarea,0)) as 认购退房面积,
 sum(tf.ocjtotal) as 认购退房金额
 from data_wide_s_trade tf 
+left join data_wide_s_room sr on tf.roomguid=sr.roomguid
 where year(tf.ZcOrderDate)=year(@var_enddate)
 and datediff(yy,tf.ocloseDate,@var_enddate)=0
 and tf.oclosereason='退房'
@@ -184,9 +204,11 @@ tf.projguid,
 tf.TopProductTypeName as 业态,
 '全盘' as 周期,
 sum(1) as 认购退房套数,	
-sum(tf.ocjbldarea) as 认购退房面积,
+--sum(tf.ocjbldarea) as 认购退房面积,
+sum(isnull(sr.bldarea,0)) as 认购退房面积,
 sum(tf.ocjtotal) as 认购退房金额
 from data_wide_s_trade tf 
+left join data_wide_s_room sr on tf.roomguid=sr.roomguid
 where year(tf.ZcOrderDate)=year(@var_enddate)
 and tf.oclosereason='退房'
 group by 
@@ -194,112 +216,119 @@ tf.projguid,
 tf.TopProductTypeName
 ) tt
 
-select tt.* into #签约情况 from (
-    select 
-        sc.projguid,
-        sc.TopProductTypeName as 业态,
-        '本周新增' as 周期,
-        sum(1) as 净签约套数,	
-        sum(sc.ccjbldarea) as 净签约面积,
-        sum(sc.ccjtotal) as 净签约金额,
-        sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
-    from data_wide_s_trade sc
-    left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
-    left join (
-        select 
-            yq.tradeguid
-        from data_wide_s_SaleModiApply yq
-        where yq.applytype in ('延期付款','延期付款(签约)')
-            and yq.ApplyStatus='已执行' 
-            --and yq.SaleType='签约'
-        group by yq.tradeguid
-    ) yq on sc.tradeguid=yq.tradeguid
-    where sc.cstatus='激活'
-        and datediff(ww,sr.x_YeJiTime-1,@var_enddate-1)=0
-    group by 
-        sc.projguid,
-        sc.TopProductTypeName
-
-    UNION ALL 
-
-    select 
-        sc.projguid,
-        sc.TopProductTypeName as 业态,
-        '本月' as 周期,
-        sum(1) as 净签约套数,	
-        sum(sc.ccjbldarea) as 净签约面积,
-        sum(sc.ccjtotal) as 净签约金额,
-        sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
-    from data_wide_s_trade sc
-    left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
-    left join (
-        select 
-            yq.tradeguid
-        from data_wide_s_SaleModiApply yq
-        where yq.applytype in ('延期付款','延期付款(签约)')
-            and yq.ApplyStatus='已执行' 
-            --and yq.SaleType='签约'
-        group by yq.tradeguid
-    ) yq on sc.tradeguid=yq.tradeguid
-    where sc.cstatus='激活'
-        and datediff(mm,sr.x_YeJiTime,@var_enddate)=0
-    group by 
-        sc.projguid,
-        sc.TopProductTypeName
-
-    UNION ALL 
-
-    select 
-        sc.projguid,
-        sc.TopProductTypeName as 业态,
-        '本年' as 周期,
-        sum(1) as 净签约套数,	
-        sum(sc.ccjbldarea) as 净签约面积,
-        sum(sc.ccjtotal) as 净签约金额,
-        sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
-    from data_wide_s_trade sc
-    left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
-    left join (
-        select 
-            yq.tradeguid
-        from data_wide_s_SaleModiApply yq
-        where yq.applytype in ('延期付款','延期付款(签约)')
-            and yq.ApplyStatus='已执行' 
-            --and yq.SaleType='签约'
-        group by yq.tradeguid
-    ) yq on sc.tradeguid=yq.tradeguid
-    where sc.cstatus='激活'
-        and datediff(yy,sr.x_YeJiTime,@var_enddate)=0
-    group by 
-        sc.projguid,
-        sc.TopProductTypeName
-
-    UNION ALL 
-
-    select 
-        sc.projguid,
-        sc.TopProductTypeName as 业态,
-        '全盘' as 周期,
-        sum(1) as 净签约套数,	
-        sum(sc.ccjbldarea) as 净签约面积,
-        sum(sc.ccjtotal) as 净签约金额,
-        sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
-    from data_wide_s_trade sc
-    left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
-    left join (
-        select 
-            yq.tradeguid
-        from data_wide_s_SaleModiApply yq
-        where yq.applytype in ('延期付款','延期付款(签约)')
-            and yq.ApplyStatus='已执行' 
-            --and yq.SaleType='签约'
-        group by yq.tradeguid
-    ) yq on sc.tradeguid=yq.tradeguid
-    where sc.cstatus='激活'
-        and sr.x_YeJiTime is not null
-    group by 
-        sc.projguid,
-        sc.TopProductTypeName
+select tt.* into  #签约情况 from 
+(
+select 
+sc.projguid,
+sc.TopProductTypeName as 业态,
+'本周新增' as 周期,
+sum(1) as 净签约套数,	
+-- sum(sc.ccjbldarea) as 净签约面积,
+sum(isnull(sr.bldarea,0)) as 净签约面积,
+sum(sc.ccjtotal) as 净签约金额,
+sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
+from data_wide_s_trade sc
+left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
+left join 
+(
+select 
+yq.tradeguid
+from data_wide_s_SaleModiApply yq
+where yq.applytype in ('延期付款','延期付款(签约)')
+and yq.ApplyStatus='已执行' 
+--and yq.SaleType='签约'
+group by 
+yq.tradeguid
+) yq on sc.tradeguid=yq.tradeguid
+where sc.cstatus='激活'
+and datediff(ww,sr.x_YeJiTime-1,@var_enddate-1)=0
+group by 
+sc.projguid,
+sc.TopProductTypeName
+UNION ALL 
+select 
+sc.projguid,
+sc.TopProductTypeName as 业态,
+'本月' as 周期,
+sum(1) as 净签约套数,	
+-- sum(sc.ccjbldarea) as 净签约面积,
+sum(isnull(sr.bldarea,0)) as 净签约面积,
+sum(sc.ccjtotal) as 净签约金额,
+sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
+from data_wide_s_trade sc
+left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
+left join 
+(
+select 
+yq.tradeguid
+from data_wide_s_SaleModiApply yq
+where yq.applytype in ('延期付款','延期付款(签约)')
+and yq.ApplyStatus='已执行' 
+--and yq.SaleType='签约'
+group by 
+yq.tradeguid
+) yq on sc.tradeguid=yq.tradeguid
+where sc.cstatus='激活'
+and datediff(mm,sr.x_YeJiTime,@var_enddate)=0
+group by 
+sc.projguid,
+sc.TopProductTypeName
+UNION ALL 
+select 
+sc.projguid,
+sc.TopProductTypeName as 业态,
+'本年' as 周期,
+sum(1) as 净签约套数,	
+-- sum(sc.ccjbldarea) as 净签约面积,
+sum(isnull(sr.bldarea,0)) as 净签约面积,
+sum(sc.ccjtotal) as 净签约金额,
+sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
+from data_wide_s_trade sc
+left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
+left join 
+(
+select 
+yq.tradeguid
+from data_wide_s_SaleModiApply yq
+where yq.applytype in ('延期付款','延期付款(签约)')
+and yq.ApplyStatus='已执行' 
+--and yq.SaleType='签约'
+group by 
+yq.tradeguid
+) yq on sc.tradeguid=yq.tradeguid
+where sc.cstatus='激活'
+and datediff(yy,sr.x_YeJiTime,@var_enddate)=0
+group by 
+sc.projguid,
+sc.TopProductTypeName
+UNION ALL 
+select 
+sc.projguid,
+sc.TopProductTypeName as 业态,
+'全盘' as 周期,
+sum(1) as 净签约套数,	
+-- sum(sc.ccjbldarea) as 净签约面积,
+sum(isnull(sr.bldarea,0)) as 净签约面积,
+sum(sc.ccjtotal) as 净签约金额,
+sum(case when yq.tradeguid is not null then 1 else 0 end) as 延期付款净签约套数
+from data_wide_s_trade sc
+left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
+left join 
+(
+select 
+yq.tradeguid
+from data_wide_s_SaleModiApply yq
+where yq.applytype in ('延期付款','延期付款(签约)')
+and yq.ApplyStatus='已执行' 
+--and yq.SaleType='签约'
+group by 
+yq.tradeguid
+) yq on sc.tradeguid=yq.tradeguid
+where sc.cstatus='激活'
+and sr.x_YeJiTime is not null
+group by 
+sc.projguid,
+sc.TopProductTypeName
 ) tt
 
 select tt.* into  #签约重售情况 from 
@@ -309,7 +338,8 @@ sc.projguid,
 sc.TopProductTypeName as 业态,
 '本周新增' as 周期,
 sum(1) as 签约重售套数,	
-sum(sc.ccjbldarea) as 签约重售面积,
+-- sum(sc.ccjbldarea) as 签约重售面积,
+sum(isnull(sr.bldarea,0)) as 签约重售面积,
 sum(sc.ccjtotal) as 签约重售金额
 from data_wide_s_trade sc
 left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
@@ -325,7 +355,8 @@ sc.projguid,
 sc.TopProductTypeName as 业态,
 '本月' as 周期,
 sum(1) as 签约重售套数,	
-sum(sc.ccjbldarea) as 签约重售面积,
+-- sum(sc.ccjbldarea) as 签约重售面积,
+sum(isnull(sr.bldarea,0)) as 签约重售面积,
 sum(sc.ccjtotal) as 签约重售金额
 from data_wide_s_trade sc
 left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
@@ -341,7 +372,8 @@ sc.projguid,
 sc.TopProductTypeName as 业态,
 '本年' as 周期,
 sum(1) as 签约重售套数,	
-sum(sc.ccjbldarea) as 签约重售面积,
+-- sum(sc.ccjbldarea) as 签约重售面积,
+sum(isnull(sr.bldarea,0)) as 签约重售面积,
 sum(sc.ccjtotal) as 签约重售金额
 from data_wide_s_trade sc
 left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
@@ -357,7 +389,8 @@ sc.projguid,
 sc.TopProductTypeName as 业态,
 '全盘' as 周期,
 sum(1) as 签约重售套数,	
-sum(sc.ccjbldarea) as 签约重售面积,
+-- sum(sc.ccjbldarea) as 签约重售面积,
+sum(isnull(sr.bldarea,0)) as 签约重售面积,
 sum(sc.ccjtotal) as 签约重售金额
 from data_wide_s_trade sc
 left join data_wide_s_room sr on sc.roomguid=sr.roomguid 
@@ -484,15 +517,3 @@ left join #实收情况 sg on zt.projguid=sg.projguid and zt.业态=sg.业态 an
 drop table #来访来电,#认购情况,#认购退房情况,#签约情况,#签约重售情况,#实收情况
 
 END
-
-
-
-
-
-
-
-
-
-
-
-
