@@ -1,19 +1,21 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_rpt_s_NotPayZnjDetail]    Script Date: 2024/12/26 16:20:00 ******/
+/****** Object:  StoredProcedure [dbo].[usp_rpt_s_NotPayZnjDetail]    Script Date: 2025/1/8 16:44:12 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
 /*
-执行示例： EXEC  usp_rpt_s_NotPayZnjDetail '0279B123-ACAA-45C5-C8F6-08D9680B609C'
+执行示例： EXEC  usp_rpt_s_NotPayZnjDetail '0279B123-ACAA-45C5-C8F6-08D9680B609C',0
 逾期违约金明细表
 modify date  20241118 将已收滞纳金和减免滞纳金金额字段放到第一笔款项上显示
 
 */
 
-ALTER  PROC [dbo].[usp_rpt_s_NotPayZnjDetail] (@ProjGUID VARCHAR(MAX) --项目分期GUID 
+ALTER  PROC [dbo].[usp_rpt_s_NotPayZnjDetail] (
+      @ProjGUID VARCHAR(MAX), --项目分期GUID 
+      @ifShowZnj int=0 --筛选“未收滞纳金字段显示为0
 )
 AS
 BEGIN
@@ -68,6 +70,7 @@ BEGIN
            f.ItemType AS 款项类型,
            ISNULL(tr.CAjBank, tr.OAjBank) AS 按揭银行,
            f.RmbAmount AS 应交款,
+           --case when  f.ItemName = '滞纳金' then isnull(f.RmbAmount,0) + isnull(f.JmLateFee,0) else 0 end AS 滞纳金应收金额,
            --未交款违约金
            CASE
                 WHEN DATEDIFF(DAY, f.LastDate, GETDATE()) > 0
@@ -159,17 +162,16 @@ BEGIN
                          MAX(g.SsDate) AS SkDate,
                          -- 最大逾期天数
                          max(DATEDIFF(DAY, g.YsDate, g.SsDate)) AS yqTs,                         
-						 SUM(g.GetAmount) AS RmbAmount,
+					SUM(g.GetAmount) AS RmbAmount,
                          SUM(DATEDIFF(DAY, g.YsDate, g.SsDate) * g.GetAmount * FineRate / 100.0) AS znjRmbAmount --参考滞纳金
                     FROM data_wide_s_s_Cwfx g WITH (NOLOCK)
                    WHERE  DATEDIFF(DAY, g.YsDate,  g.SsDate ) > 0  AND g.YsItemNameGuid   = f.ItemNameGUID AND g.TradeGUID  = f.TradeGUID
 				   AND   DATEDIFF(DAY,g.YsDate ,f.LastDate ) =0
                    GROUP BY g.TradeGUID,
                             g.YsItemNameGuid ) sk
-      LEFT JOIN (
-	             SELECT TradeGUID,
+      LEFT JOIN ( SELECT TradeGUID,
                         YsItemNameGuid,
-						YsDate,
+				    YsDate,
                         MAX(FineRate) AS FineRate,
                         SUM(FineAmount1) AS 参考滞纳金
                    FROM data_wide_s_s_Cwfx WITH (NOLOCK)
@@ -177,7 +179,7 @@ BEGIN
                            YsItemNameGuid,YsDate) znj
         ON f.ItemNameGUID = znj.YsItemNameGuid AND f.TradeGUID    = znj.TradeGUID AND   DATEDIFF(DAY,znj.YsDate ,f.LastDate ) =0
      -- LEFT  JOIN data_wide_dws_s_roomexpand rex ON rex.RoomGUID =r.RoomGUID
-     WHERE f.IsFk         = 1
+     WHERE f.IsFk = 1 
        AND f.ProjGUID IN (SELECT [Value] FROM [dbo].[fn_Split](@ProjGUID, ',') )
        -- AND ISNULL(f.RmbYe, 0) > 0
        AND tr.TradeStatus = '激活'
@@ -185,39 +187,81 @@ BEGIN
               tr.RoomInfo;
 
 	--查询结果
-	SELECT  *,
-	    --   CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
-	    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
-		   --END , --滞纳金占比尾数补差
-     --     ISNULL(JmLateFee,0)  *  CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
-	    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
-		   --END AS 累计已减免滞纳金,
-     --     ISNULL(znjGetAmount,0)  *  CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
-	    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
-		   --END AS 累计已收款违约金金额
-            CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
-	           ISNULL(JmLateFee,0)  END AS 累计已减免滞纳金,
-            CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
-	          ISNULL(znjGetAmount,0)  END AS 累计已收款违约金金额
-	FROM  (
-		SELECT  znj.*,
-			 CONVERT(DECIMAL(36,12), CASE WHEN  SUM(  应收违约金金额  ) OVER(PARTITION BY znj.TradeGUID  ) =0  THEN  0 ELSE   应收违约金金额 
-			  / SUM(应收违约金金额 ) OVER(PARTITION BY znj.TradeGUID  ) END  ) AS  znjRate, --滞纳金占比,
-			ISNULL(JmLateFee,0)  AS  JmLateFee, -- 累计已减免滞纳金,
-			ISNULL(znjGetAmount,0)  AS znjGetAmount --累计已收款违约金金额
-		FROM  #znj znj
-		LEFT JOIN  (
-			 SELECT f.TradeGUID, SUM(ISNULL(JmLateFee,0))  AS JmLateFee --减免滞纳金
-				  FROM  dbo.data_wide_s_Fee f
-				  GROUP BY  f.TradeGUID
-		) jm  ON jm.TradeGUID =znj.TradeGUID
-		LEFT JOIN  (
-		   SELECT  fx.TradeGUID,SUM(ISNULL(GetAmount,0)) AS znjGetAmount  --实收滞纳金
-			FROM data_wide_s_s_Cwfx fx
-		   WHERE  YsItemName ='滞纳金'
-		   GROUP BY fx.TradeGUID
-		) ss ON ss.TradeGUID = znj.TradeGUID
-	) t
+     IF @ifShowZnj = 1
+     BEGIN
+              select  * 
+              from  (
+               SELECT  *,
+                    --   CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
+                         --END , --滞纳金占比尾数补差
+                    --     ISNULL(JmLateFee,0)  *  CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
+                         --END AS 累计已减免滞纳金,
+                    --     ISNULL(znjGetAmount,0)  *  CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                    --      ( 1.00 -  SUM(ISNULL(znjRate,0) ) OVER(PARTITION BY t.TradeGUID) ) + znjRate ELSE znjRate
+                         --END AS 累计已收款违约金金额
+                         case when  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN   
+                              isnull(znjYsAmont,0)  else 0 end as 累计滞纳金结转金额,
+                         CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                              ISNULL(JmLateFee,0)  END AS 累计已减免滞纳金,
+                         CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                              ISNULL(znjGetAmount,0)  END AS 累计已收款违约金金额 
+                    FROM  (
+                         SELECT  znj.*,
+                              CONVERT(DECIMAL(36,12), CASE WHEN  SUM(  应收违约金金额  ) OVER(PARTITION BY znj.TradeGUID  ) =0  THEN  0 ELSE   应收违约金金额 
+                              / SUM(应收违约金金额 ) OVER(PARTITION BY znj.TradeGUID  ) END  ) AS  znjRate, --滞纳金占比,
+                              ISNULL(JmLateFee,0)  AS  JmLateFee, -- 累计已减免滞纳金,
+                              ISNULL(znjYsAmont,0) AS znjYsAmont,
+                              ISNULL(znjGetAmount,0)  AS znjGetAmount -- 累计已收款违约金金额
+                         FROM  #znj znj
+                         LEFT JOIN  (
+                              SELECT f.TradeGUID, SUM(ISNULL(JmLateFee,0))  AS JmLateFee, -- 减免滞纳金
+                                   sum(case when f.ItemName = '滞纳金' then isnull(f.RmbAmount,0)  else 0 end) as znjYsAmont -- 滞纳金结转应收金额
+                                   FROM  dbo.data_wide_s_Fee f
+                                   GROUP BY  f.TradeGUID
+                         ) jm  ON jm.TradeGUID =znj.TradeGUID
+                         LEFT JOIN  (
+                              SELECT  fx.TradeGUID,SUM(ISNULL(GetAmount,0)) AS znjGetAmount  -- 实收滞纳金
+                                   FROM data_wide_s_s_Cwfx fx
+                              WHERE  YsItemName ='滞纳金'
+                         GROUP BY fx.TradeGUID
+                         ) ss ON ss.TradeGUID = znj.TradeGUID
+                    ) t
+              ) s
+            where  ( isnull(应收违约金金额,0) - isnull(累计已收款违约金金额,0)- isnull(累计已减免滞纳金,0) ) <> 0
+     END 
+     ELSE 
+     BEGIN
+               SELECT  *,
+                         case when  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN   
+                              isnull(znjYsAmont,0)  else 0 end as 累计滞纳金结转金额,
+                         CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                              ISNULL(JmLateFee,0)  END AS 累计已减免滞纳金,
+                         CASE WHEN  ROW_NUMBER() OVER(PARTITION BY TradeGUID ORDER BY znjRate DESC  ) = 1 THEN  
+                              ISNULL(znjGetAmount,0)  END AS 累计已收款违约金金额
+                    FROM  (
+                         SELECT  znj.*,
+                              CONVERT(DECIMAL(36,12), CASE WHEN  SUM(  应收违约金金额  ) OVER(PARTITION BY znj.TradeGUID  ) =0  THEN  0 ELSE   应收违约金金额 
+                              / SUM(应收违约金金额 ) OVER(PARTITION BY znj.TradeGUID  ) END  ) AS  znjRate, --滞纳金占比,
+                              ISNULL(JmLateFee,0)  AS  JmLateFee, -- 累计已减免滞纳金,
+					     ISNULL(znjYsAmont,0) AS znjYsAmont,
+                              ISNULL(znjGetAmount,0)  AS znjGetAmount --累计已收款违约金金额
+                         FROM  #znj znj
+                         LEFT JOIN  (
+                              SELECT f.TradeGUID, SUM(ISNULL(JmLateFee,0))  AS JmLateFee, -- 减免滞纳金
+                                   sum(case when f.ItemName = '滞纳金' then isnull(f.RmbAmount,0)  else 0 end) as znjYsAmont -- 滞纳金结转应收金额
+                                   FROM  dbo.data_wide_s_Fee f
+                                   GROUP BY  f.TradeGUID
+                         ) jm  ON jm.TradeGUID =znj.TradeGUID
+                         LEFT JOIN  (
+                         SELECT  fx.TradeGUID,SUM(ISNULL(GetAmount,0)) AS znjGetAmount  --实收滞纳金
+                              FROM data_wide_s_s_Cwfx fx
+                         WHERE  YsItemName ='滞纳金'
+                         GROUP BY fx.TradeGUID
+                         ) ss ON ss.TradeGUID = znj.TradeGUID
+                    ) t
+     END
 
     --删除临时表
 	DROP TABLE  #znj

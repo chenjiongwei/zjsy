@@ -240,9 +240,9 @@ BEGIN
         [本年业绩认定底价金额汇总],
         [货值变动率1],
         [货值变动率2],
-        [延期付款变更率],
         [当年签约延期付款变更次数],
-        [当年销售合同总套数]
+        [当年销售合同总套数],
+        [延期付款变更率]
     from result_kh_zb_snapshot
     where [version] = @版本号
         and [p_projectId] in (@ProjGUID)
