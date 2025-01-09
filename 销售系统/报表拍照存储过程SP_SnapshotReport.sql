@@ -148,9 +148,9 @@ BEGIN
             CASE WHEN bd.BnsjqyMoney = 0 THEN 0 ELSE (bd.sjqy-bd.BnsjqyMoney)/bd.BnsjqyMoney END AS 货值变动率1,
             CASE WHEN bd.BnyjMoney = 0 THEN 0 ELSE (bd.yjrdqy-bd.BnyjMoney)/bd.BnyjMoney END AS 货值变动率2,
            --延期付款变更率=当年签约房源（业绩口径）申请延期付款变更套数÷当年销售合同总套数（业绩口径）×100%
+            CASE WHEN ISNULL(con.BnCCCount,0) = 0 THEN 0 ELSE ISNULL(con.yqbgCount,0) * 1.0/ISNULL(con.BnCCCount,0) END AS 延期付款变更率,
             ISNULL(con.yqbgCount,0) as 当年签约延期付款变更次数,
-            ISNULL(con.BnCCCount,0) as 当年销售合同总套数,
-            CASE WHEN ISNULL(con.BnCCCount,0) = 0 THEN 0 ELSE ISNULL(con.yqbgCount,0) * 1.0/ISNULL(con.BnCCCount,0) END AS 延期付款变更率
+            ISNULL(con.BnCCCount,0) as 当年销售合同总套数
         FROM data_wide_mdm_Project pp
        LEFT JOIN(SELECT    ParentProjGUID AS ProjGUID ,
                     SUM(ISNULL(BudgetContractAmount, 0)) AS BudgetContractAmount ,
