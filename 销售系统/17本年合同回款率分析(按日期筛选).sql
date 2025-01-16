@@ -39,8 +39,8 @@ select * into #实收情况 FROM
 	SUM(case when year(sg.HKdate)=YEAR(@date) AND st.CNetQsDate IS NULL and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 未网签本年回款金额,
 
 	/*本年签约（含草签）取最早为本年回款统计 tr.CQsDate 判断为本年，且回款也在本年 */
-	SUM(case when year(sg.HKdate)=YEAR(@date) AND year(st.CQsDate)=YEAR(@date) and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 本年签约本年回款金额,
-	SUM(case when year(sg.HKdate)=YEAR(@date) AND year(st.CQsDate) < YEAR(@date) and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 往年签约本年回款金额,
+	SUM(case when year(sg.HKdate)=YEAR(@date) AND year(isnull(st.CNetQsDate,st.CQsDate))=YEAR(@date) and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 本年签约本年回款金额,
+	SUM(case when year(sg.HKdate)=YEAR(@date) AND year(isnull(st.CNetQsDate,st.CQsDate)) < YEAR(@date) and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 往年签约本年回款金额,
 	SUM(case when year(sg.HKdate)=YEAR(@date) AND st.CQsDate IS NULL and  sg.itemtype IN ('非贷款类房款','贷款类房款','补充协议款') then sg.RmbAmount end) AS 认购本年回款金额,
 
 	/*本年累计回款按款项判断 */

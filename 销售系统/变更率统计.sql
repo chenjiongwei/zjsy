@@ -55,7 +55,6 @@ GROUP BY r.BUName, r.ParentProjName, p.SpreadName, r.ParentProjGUID
 -- 查询明细：获取具体房间的延期付款变更记录
 SELECT r.BUName, 
        r.ParentProjName,
-       p.SpreadName,
        r.RoomGUID,
        r.roominfo,
        r.x_YeJiTime,
@@ -68,8 +67,7 @@ FROM data_wide_s_Room r WITH(NOLOCK)
         ON tr.RoomGUID = r.RoomGUID 
         AND tr.TradeStatus = '激活' 
         AND tr.IsLast = 1 
-    INNER JOIN #proj p 
-        ON p.p_projectId = r.ParentProjGUID
+    --INNER JOIN #proj p  ON p.p_projectId = r.ParentProjGUID
     OUTER APPLY (
         -- 获取最新的延期付款申请详细信息
         SELECT TOP 1 sm.ApplyGUID,
@@ -84,5 +82,91 @@ FROM data_wide_s_Room r WITH(NOLOCK)
         ORDER BY sm.ApplyDate DESC
     ) sma
 WHERE r.Status IN ('签约') 
-  AND DATEDIFF(YEAR, r.x_YeJiTime, @qxDate) = 0
+     AND DATEDIFF(YEAR, r.x_YeJiTime, @qxDate) = 0
+     AND  r.ParentProjGUID IN (@projguid)
 
+
+
+--ZSDC-01-考核指标完成情况-延期付款变更率明细
+IF @版本号 = '实时' 
+BEGIN
+    -- 查询明细：获取具体房间的延期付款变更记录
+    SELECT r.BUName,
+           r.BUGUID,
+           r.ParentProjGUID,
+           r.ParentProjName,
+           r.RoomGUID,
+           r.roominfo,
+           r.x_YeJiTime,
+           sma.ApplyGUID,
+           sma.ApplyDate,
+           sma.ApplyType,
+           sma.ApplyStatus
+    FROM data_wide_s_Room r WITH(NOLOCK)
+        INNER JOIN data_wide_s_Trade tr WITH(NOLOCK) 
+            ON tr.RoomGUID = r.RoomGUID 
+            AND tr.TradeStatus = '激活' 
+            AND tr.IsLast = 1 
+        --INNER JOIN #proj p ON p.p_projectId = r.ParentProjGUID
+        OUTER APPLY (
+            -- 获取最新的延期付款申请详细信息
+            SELECT TOP 1 sm.ApplyGUID,
+                        sm.ApplyDate,
+                        sm.ApplyType,
+                        sm.ApplyStatus
+            FROM data_wide_s_SaleModiApply sm WITH(NOLOCK) 
+            WHERE sm.ApplyStatus = '已执行' 
+                AND sm.ApplyType IN ('延期付款', '延期付款(签约)')
+                AND sm.RoomGUID = r.RoomGUID
+                AND sm.TradeGUID = tr.TradeGUID
+            ORDER BY sm.ApplyDate DESC
+        ) sma
+    WHERE r.Status IN ('签约') 
+        AND DATEDIFF(YEAR, r.x_YeJiTime, getdate()) = 0
+        AND r.ParentProjGUID IN (@projguid)
+        AND r.BUGUID IN (@buguid)
+END 
+ELSE
+BEGIN
+    SELECT snapshot_time,
+           version,
+           BUName,
+           BUGUID,
+           ParentProjGUID,
+           ParentProjName,
+           RoomGUID,
+           roominfo,
+           x_YeJiTime,
+           ApplyGUID,
+           ApplyDate,
+           ApplyType,
+           ApplyStatus
+    FROM dbo.Result_YearYqfkSaleModiApply
+    WHERE [version] = @版本号
+        AND BUGUID IN (@buguid)
+        AND ParentProjGUID IN (@Projguid)
+END
+
+    -- IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Result_YearYqfkSaleModiApply]') AND type in (N'U'))
+    -- BEGIN
+    --     CREATE TABLE [dbo].[Result_YearYqfkSaleModiApply](
+    --         [snapshot_time] datetime NOT NULL,
+    --         [version] nvarchar(50) NOT NULL,
+    --         [BUName] nvarchar(100) NULL,
+    --         [BUGUID] uniqueidentifier NULL,
+    --         [ParentProjGUID] uniqueidentifier NULL,
+    --         [ParentProjName] nvarchar(100) NULL, 
+    --         [RoomGUID] uniqueidentifier NULL,
+    --         [roominfo] nvarchar(100) NULL,
+    --         [x_YeJiTime] datetime NULL,
+    --         [ApplyGUID] uniqueidentifier NULL,
+    --         [ApplyDate] datetime NULL,
+    --         [ApplyType] nvarchar(50) NULL,
+    --         [ApplyStatus] nvarchar(50) NULL,
+    --         CONSTRAINT [PK_Result_YearYqfkSaleModiApply] PRIMARY KEY CLUSTERED 
+    --         (
+    --             [snapshot_time] ASC,
+    --             [version] ASC
+    --         )
+    --     )
+    -- END

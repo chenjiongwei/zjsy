@@ -1,10 +1,11 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/3 16:55:17 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/15 21:05:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 /*
 存储过程功能说明:拍照报表,用于定时生成报表数据快照
@@ -13,9 +14,10 @@ GO
 1. 考核指标完成情况 (result_kh_zb_snapshot)
 2. 本年业绩认定房源明细 (result_room_yjrd_snapshot) 
 3. 本年签约房源明细 (Result_YearlySignedRooms)
-4. 项目签约回款汇总表 (Result_ProjectSigningPaymentSummary)
-5. 房源台账明细表(全表) (Result_RoomLedgerDetail)
-6. 未收款项明细表(含逾期款) (Result_UnpaidAmountDetail)
+4. 本年签约延期付款变更次数 (Result_YearYqfkSaleModiApply)
+5. 项目签约回款汇总表 (Result_ProjectSigningPaymentSummary)
+6. 房源台账明细表(全表) (Result_RoomLedgerDetail)
+7. 未收款项明细表(含逾期款) (Result_UnpaidAmountDetail)
 7. 实收款项明细表(全表)-含回款到账日期 (Result_ReceivedPaymentDetail)
 8. 本年至今回笼金额明细表 (Result_ThisYearGetAmountDetail)
 */
@@ -186,11 +188,12 @@ BEGIN
         LEFT JOIN  (
             SELECT  g.ParentProjGUID AS ProjGUID,
             SUM(ISNULL(g.RmbAmount,0)/ 10000.0 ) AS LjRmbAmount, 
-            SUM(CASE WHEN DATEDIFF(YEAR, ISNULL(g.SkDate,0), GETDATE()) = 0 THEN ISNULL(g.RmbAmount,0) / 10000.0  ELSE 0 END) AS BnRmbAmount  
+            SUM(CASE WHEN DATEDIFF(YEAR, ISNULL(g.cwSkDate,0), GETDATE()) = 0 THEN ISNULL(g.RmbAmount,0) / 10000.0  ELSE 0 END) AS BnRmbAmount  
             FROM   data_wide_s_Getin g WITH(NOLOCK)
             LEFT JOIN data_wide_s_Voucher v WITH(NOLOCK)ON g.VouchGUID = v.VouchGUID
-            inner join data_wide_s_trade st on g.SaleGUID=st.tradeguid and (st.cstatus='激活' or st.ostatus='激活')
-            WHERE g.VouchStatus <> '作废' AND  g.ItemType IN ('贷款类房款', '非贷款类房款','补充协议款' ) --and g.ItemName !='诚意金'
+            left join data_wide_s_trade st on g.SaleGUID=st.tradeguid and st.islast = 1 --and (st.cstatus='激活' or st.ostatus='激活')
+            WHERE isnull(g.VouchStatus,'') <> '作废' AND  g.ItemType IN ('贷款类房款', '非贷款类房款','补充协议款' ) --and g.ItemName !='诚意金'
+				and g.VouchType not in ('POS机单','划拨单','放款单')
             GROUP BY  g.ParentProjGUID
         ) gg ON  gg.ProjGUID = pp.p_projectId
         LEFT  JOIN  (
@@ -493,6 +496,101 @@ BEGIN
     END CATCH
 
     BEGIN TRY
+        -- 记录开始执行
+        INSERT INTO [dbo].[SnapshotExecutionLog] (
+            SnapshotName,
+            ExecuteMode,
+            StartTime,
+            VersionNo,
+            Status
+        )
+        VALUES (
+            '01-延期付款变更明细表',
+            @ExecuteMode,
+            @SnapshotTime,
+            @VersionNo,
+            'Started'
+        );
+
+        -- 执行数据插入
+        -- 01-延期付款变更明细表
+        -- 插入数据
+        INSERT INTO [dbo].[Result_YearYqfkSaleModiApply] (
+            snapshot_time,
+            version,
+            BUName,
+            BUGUID,
+            ParentProjGUID,
+            ParentProjName,
+            RoomGUID,
+            roominfo,
+            x_YeJiTime,
+            ApplyGUID,
+            ApplyDate,
+            ApplyType,
+            ApplyStatus
+        )
+        SELECT 
+            GETDATE() AS snapshot_time,
+            CONVERT(VARCHAR(10), GETDATE(), 23) AS version,
+            r.BUName,
+            r.BUGUID,
+            r.ParentProjGUID,
+            r.ParentProjName,
+            r.RoomGUID,
+            r.roominfo,
+            r.x_YeJiTime,
+            sma.ApplyGUID,
+            sma.ApplyDate,
+            sma.ApplyType,
+            sma.ApplyStatus
+        FROM data_wide_s_Room r WITH(NOLOCK)
+            INNER JOIN data_wide_s_Trade tr WITH(NOLOCK) 
+                ON tr.RoomGUID = r.RoomGUID 
+                AND tr.TradeStatus = '激活' 
+                AND tr.IsLast = 1 
+            OUTER APPLY (
+                -- 获取最新的延期付款申请详细信息
+                SELECT TOP 1 
+                    sm.ApplyGUID,
+                    sm.ApplyDate,
+                    sm.ApplyType,
+                    sm.ApplyStatus
+                FROM data_wide_s_SaleModiApply sm WITH(NOLOCK) 
+                WHERE sm.ApplyStatus = '已执行' 
+                    AND sm.ApplyType IN ('延期付款', '延期付款(签约)')
+                    AND sm.RoomGUID = r.RoomGUID
+                    AND sm.TradeGUID = tr.TradeGUID
+                ORDER BY sm.ApplyDate DESC
+            ) sma
+        WHERE r.Status IN ('签约') 
+            AND DATEDIFF(YEAR, r.x_YeJiTime, getdate()) = 0
+
+        -- 记录执行成功
+        UPDATE [dbo].[SnapshotExecutionLog]
+        SET EndTime = GETDATE(),
+            Status = 'Completed',
+            AffectedRows = @@ROWCOUNT
+        WHERE SnapshotName = '01-延期付款变更明细表'
+            AND StartTime = @SnapshotTime;
+
+    END TRY
+    BEGIN CATCH
+        SELECT @ErrorMessage = ERROR_MESSAGE();
+        
+        -- 记录执行失败
+        UPDATE [dbo].[SnapshotExecutionLog]
+        SET EndTime = GETDATE(),
+            Status = 'Failed',
+            ErrorMessage = @ErrorMessage
+        WHERE SnapshotName = '01-延期付款变更明细表'
+            AND StartTime = @SnapshotTime;
+
+        -- 抛出异常
+        THROW;
+    END CATCH
+
+    BEGIN TRY
         
         -- 记录开始执行
         INSERT INTO [dbo].[SnapshotExecutionLog] (
@@ -554,10 +652,11 @@ BEGIN
             sum(sg.amount) as 本年已回款
         INTO #回款情况
         FROM data_wide_s_getin sg 
-        INNER JOIN data_wide_s_trade st on sg.SaleGUID=st.tradeguid and (st.cstatus='激活' or st.ostatus='激活')
+        left JOIN data_wide_s_trade st on sg.SaleGUID=st.tradeguid and st.islast = 1--and (st.cstatus='激活' or st.ostatus='激活')
         WHERE sg.itemtype in ('贷款类房款','非贷款类房款','补充协议款')
             and isnull(sg.vouchstatus,'') !='作废'
-            and year(sg.skdate)=year(getdate())
+            and year(sg.cwskdate)=year(getdate())
+			and sg.VouchType not in ('POS机单','划拨单','放款单')
             --and st.projguid in (@projguid)
         GROUP BY 
             st.parentprojguid
