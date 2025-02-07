@@ -101,7 +101,8 @@ select * into #实收情况 from
         sum(case when year(sg.cwskdate)=@年份 and month(sg.cwskdate)=12 then sg.RmbAmount end) as 十二月累计实收
     from data_wide_s_getin sg 
     left join data_wide_s_trade st on sg.SaleGUID=st.tradeguid and st.IsLast = 1   -- and (st.cstatus='激活' or st.ostatus='激活')
-    where isnull(sg.vouchstatus,'')<>'作废' AND  sg.VouchType NOT IN ( 'POS机单', '划拨单', '放款单' )
+    where isnull(sg.vouchstatus,'')<>'作废' 
+    AND  sg.VouchType NOT IN ( 'POS机单', '划拨单', '放款单' )
     group by sg.projguid
 ) tt
 

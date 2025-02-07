@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_rpt_s_SaleAlterDetailsInfo]    Script Date: 2024/12/12 17:23:52 ******/
+/****** Object:  StoredProcedure [dbo].[usp_rpt_s_SaleAlterDetailsInfo]    Script Date: 2025/1/16 17:58:29 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -28,6 +28,7 @@ AS
                 ISNULL(tr.CPayForm, tr.OPayForm) AS 付款方式 ,
                 ISNULL(tr.CCjTotal, OCjTotal) AS 成交金额 ,
                 sm.ApplyType AS 申请类型 ,
+                case when sm.ApplyType = '退房' then g.sjtk else 0 end as 实际退房退款金额 ,
                 CASE WHEN sm.ApplyType = '退房' THEN tr.Sslk END AS 若申请退房退房金额 ,
                 CASE WHEN sm.ApplyType = '退房' THEN CASE WHEN ISNULL(tr.CCjTotal, OCjTotal) = 0 THEN 0 ELSE ISNULL(tr.Sslk, 0) / ISNULL(tr.CCjTotal, OCjTotal)END END AS 房款占比 ,  --（退款金额/成交金额）
                 sm.ReasonType AS 原因分类 ,
@@ -45,7 +46,11 @@ AS
                 INNER JOIN data_wide_mdm_Project pp  WITH (NOLOCK ) ON p.ParentGUID = pp.p_projectId AND   pp.Level = 2
                 INNER JOIN data_wide_s_SaleModiApply sm  WITH (NOLOCK ) ON sm.RoomGUID = r.RoomGUID
                 LEFT JOIN dbo.data_wide_s_Trade tr WITH (NOLOCK )  ON sm.TradeGUID = tr.TradeGUID AND  tr.IsLast = 1
-        WHERE   sm.ApplyStatus <> '作废' AND  r.ProjGUID IN(SELECT    [Value] FROM    [dbo].[fn_Split](@ProjGUID, ',') );
+				LEFT JOIN (
+				   SELECT  SaleGUID,SUM(CASE WHEN  VouchType ='退款单' THEN  Amount ELSE 0 END ) AS sjtk
+				   FROM dbo.data_wide_s_Getin 
+				   WHERE SaleGUID ='cc8a4d47-153c-ed11-8ad3-005056a53239' AND  IsFk =1
+				   GROUP BY  SaleGUID 
+				) g ON g.SaleGUID =tr.TradeGUID
+        WHERE   sm.ApplyStatus <> '作废' AND  r.ProjGUID IN(SELECT    [Value] FROM    [dbo].[fn_Split](@ProjGUID, ',') )
     END;
-
-
