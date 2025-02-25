@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_s_项目销售周报]    Script Date: 2025/1/16 9:42:24 ******/
+/****** Object:  StoredProcedure [dbo].[usp_s_项目销售周报]    Script Date: 2025/2/25 17:01:22 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -331,7 +331,7 @@ set  @var_enddate=convert(varchar(10),@var_enddate,120)+' 23:59:59'
             GROUP BY 
                 yq.tradeguid
         ) yq ON sc.tradeguid = yq.tradeguid
-        WHERE sc.cstatus = '激活' AND sr.x_YeJiTime IS NOT NULL
+        WHERE sc.cstatus = '激活' AND sr.x_YeJiTime IS NOT NULL 
         GROUP BY 
             sc.projguid,
             sc.TopProductTypeName
@@ -460,7 +460,7 @@ set  @var_enddate=convert(varchar(10),@var_enddate,120)+' 23:59:59'
             SUM(CASE WHEN  YEAR(isnull(st.CNetQsDate,st.cqsdate))<YEAR(@var_enddate) THEN sg.rmbamount ELSE 0 END) AS 往年签约回款,
             SUM(CASE WHEN  st.cqsdate IS NULL THEN sg.rmbamount ELSE 0 END) AS 认购未签约回款
         FROM data_wide_s_getin sg 
-        INNER JOIN data_wide_s_trade st ON sg.SaleGUID=st.tradeguid AND st.IsLast = 1
+        LEFT JOIN data_wide_s_trade st ON sg.SaleGUID=st.tradeguid AND st.IsLast = 1
         WHERE ISNULL(sg.vouchstatus,'')<>'作废'
             AND sg.itemtype IN ('贷款类房款','非贷款类房款','补充协议款')
             AND sg.VouchType NOT IN ('POS机单','划拨单','放款单')
@@ -473,20 +473,20 @@ set  @var_enddate=convert(varchar(10),@var_enddate,120)+' 23:59:59'
 
         -- 全盘实收情况
         SELECT 
-            st.projguid,
-            st.TopProductTypeName AS 业态,
+            sg.projguid,
+            isnull(sg.TopProductTypeName,'住宅') AS 业态,
             '全盘' AS 周期,
             SUM(CASE WHEN YEAR(isnull(st.CNetQsDate,st.cqsdate))=YEAR(@var_enddate) THEN sg.rmbamount ELSE 0 END) AS 本年签约回款,
             SUM(CASE WHEN YEAR(isnull(st.CNetQsDate,st.cqsdate))<YEAR(@var_enddate) THEN sg.rmbamount ELSE 0 END) AS 往年签约回款,
             SUM(CASE WHEN  st.cqsdate IS NULL THEN sg.rmbamount ELSE 0 END) AS 认购未签约回款
         FROM data_wide_s_getin sg 
-        INNER JOIN data_wide_s_trade st ON sg.SaleGUID=st.tradeguid AND st.IsLast = 1
+        LEFT JOIN data_wide_s_trade st ON sg.SaleGUID=st.tradeguid AND st.IsLast = 1
         WHERE ISNULL(sg.vouchstatus,'')<>'作废'
             AND sg.itemtype IN ('贷款类房款','非贷款类房款','补充协议款')
             AND sg.VouchType NOT IN ('POS机单','划拨单','放款单')
         GROUP BY 
-            st.projguid,
-            st.TopProductTypeName
+            sg.projguid,
+            isnull(sg.TopProductTypeName,'住宅') 
     ) tt
 
     -- 查询最终结果

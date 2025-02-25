@@ -1,6 +1,6 @@
-DROP TABLE 待修复联系单 
+-- DROP TABLE 待修复联系单 
 
---查询工作联系单明细
+--1.1 查询工作联系单明细
 SELECT 
     a.[ContractItemGUID],--联系单GUID
     bu.BUName AS 公司,
@@ -28,7 +28,7 @@ FROM  [联系单修复]  a
 LEFT  JOIN  #conitem  b ON a.联系单编号 =b.联系单编号 AND  b.公司 = a.公司
 WHERE  b.联系单编号 IS NULL 
 
-DROP TABLE  关联合同名称不存在
+-- DROP TABLE  关联合同名称不存在
 -- 依据关联合同名称修复关联合同信息
 SELECT  a.*  INTO  关联合同名称不存在
 FROM  [联系单修复]  a
@@ -36,9 +36,10 @@ inner   JOIN  #conitem  b ON a.联系单编号 =b.联系单编号 AND  b.公司 
 left join  cb_Contract c on a.关联合同编号 = c.ContractCode 
 WHERE a.关联合同名称 IS NOT NULL AND  c.ContractName IS NULL
 
--- 开始修复
+-- 2.1 开始修复
+-- 备份数据表
 SELECT  * INTO cb_ContractItem_bak20241206  FROM  cb_ContractItem
-
+-- 查询更新信息
 SELECT DISTINCT  b.ContractItemGUID,c.ContractCode,c.ContractName,c.ContractGUID
 INTO #Updateconitem
 FROM  [联系单修复]  a
