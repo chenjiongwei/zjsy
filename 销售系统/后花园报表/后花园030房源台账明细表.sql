@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_rpt_s_RoomDetailsInfoByHhy]    Script Date: 2025/2/7 17:46:35 ******/
+/****** Object:  StoredProcedure [dbo].[usp_rpt_s_RoomDetailsInfoByHhy]    Script Date: 2025/2/25 14:29:40 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -282,7 +282,7 @@ AS
 		AND  r.BldArea <> '1' AND r.DjTotal > 0
 		--AND ( ( CASE WHEN tr.x_InitialledDate IS NOT NULL  THEN tr.x_InitialledDate ELSE tr.CNetQsDate END  )
 		--BETWEEN @SDate AND @EDate )
-
+        order by   r.RoomInfo
 
     END;
 
