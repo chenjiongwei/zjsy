@@ -8,8 +8,6 @@ GO
 
 -- usp_s_项目销售周报 
 
-
-
 ALTER PROC [dbo].[usp_s_项目销售周报]      
  (      
  @var_proj VARCHAR(MAX),              
