@@ -16,11 +16,11 @@ select
     st.CQsDate as 签约日期,
     st.CNetQsDate as 网签日期,
     isnull(st.CCstAllName,st.OCstAllName) 客户名称,
-    isnull(st.BcAfterCTotal,st.ocjtotal) as 实际成交金额, -- 交易单对应的房间的成交金额含主房间面积补差金额
+    isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) as 实际成交金额, -- 交易单对应的房间的成交金额含主房间面积补差金额
     sk.总已收房款 as 已收房款, -- 交易单对应的实收房款金额，含面积补差款
     jz.结转金额 as 结转金额, -- 房间对应的结转单的结转金额累计
     case when  jz.tradeguid is not null then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end as 结转面积,
-    case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end - isnull(jz.结转金额,0) as 已售未结货值 -- 等于实际成交金额 - 结转金额
+    isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) - isnull(jz.结转金额,0) as 已售未结货值 -- 等于实际成交金额 - 结转金额
 from data_wide_s_room sr with (nolock)
 left join data_wide_s_trade st with (nolock) on sr.roomguid=st.roomguid  and (st.cstatus='激活' or st.ostatus='激活')
 left join 

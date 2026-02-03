@@ -1,6 +1,3 @@
--- alter table result_kh_zb_snapshot add  当年签约延期付款变更次数 int 
--- alter table result_kh_zb_snapshot add  当年销售合同总套数 int 
-
 --ZSDC-01-考核指标完成情况
 IF  @版本号='实时' 
 BEGIN
@@ -28,7 +25,7 @@ SELECT
     gg.BnRmbAmount AS 本年至今累计回款金额 ,     
     CASE WHEN ISNULL(xst.BudgetGetinAmount,0) =0  THEN 0 ELSE  ISNULL( gg.BnRmbAmount ,0) /ISNULL(xst.BudgetGetinAmount,0) END  AS 本年至今累计回款集团版达成率 ,
     NULL AS 本年至今累计回款内控版达成率 ,   
-    BnxksBldArea AS 本年新开售面积 ,   --  
+    BnxksBldArea AS 本年新开售面积 ,     
     BnzjdjBldArea AS 在建待建面积, 
     BnQcchBldArea_QY AS 本年期初库存面积签约,
     BnQCchCCjBldArea_QY AS 截止当前库存签约面积签约口径 ,
@@ -93,11 +90,13 @@ INNER     JOIN(SELECT    r.ParentProjGUID AS ProjGUID ,
 LEFT JOIN  (
     SELECT  g.ParentProjGUID AS ProjGUID,
     SUM(ISNULL(g.RmbAmount,0)/ 10000.0 ) AS LjRmbAmount, 
-    SUM(CASE WHEN DATEDIFF(YEAR, ISNULL(g.SkDate,0), GETDATE()) = 0 THEN ISNULL(g.RmbAmount,0) / 10000.0  ELSE 0 END) AS BnRmbAmount  
+    SUM(CASE WHEN DATEDIFF(YEAR, ISNULL(g.CWSkDate,0), GETDATE()) = 0 THEN ISNULL(g.RmbAmount,0) / 10000.0  ELSE 0 END) AS BnRmbAmount  
     FROM   data_wide_s_Getin g WITH(NOLOCK)
     LEFT JOIN data_wide_s_Voucher v WITH(NOLOCK)ON g.VouchGUID = v.VouchGUID
-    inner join data_wide_s_trade st on g.SaleGUID=st.tradeguid and (st.cstatus='激活' or st.ostatus='激活')
-    WHERE g.VouchStatus <> '作废' AND  g.ItemType IN ('贷款类房款', '非贷款类房款','补充协议款' ) --and g.ItemName !='诚意金'
+    LEFT join data_wide_s_trade st on g.SaleGUID=st.tradeguid AND st.IsLast = 1 --and (st.cstatus='激活' or st.ostatus='激活')
+    WHERE isnull(g.VouchStatus,'') <> '作废' 
+		AND  g.ItemType IN ('贷款类房款', '非贷款类房款','补充协议款' ) --and g.ItemName !='诚意金'
+		AND	 g.VouchType not in ('POS机单','划拨单','放款单')
     GROUP BY  g.ParentProjGUID
 ) gg ON  gg.ProjGUID = pp.p_projectId
 LEFT  JOIN  (
@@ -240,9 +239,9 @@ BEGIN
         [本年业绩认定底价金额汇总],
         [货值变动率1],
         [货值变动率2],
+        [延期付款变更率],
         [当年签约延期付款变更次数],
-        [当年销售合同总套数],
-        [延期付款变更率]
+        [当年销售合同总套数]
     from result_kh_zb_snapshot
     where [version] = @版本号
         and [p_projectId] in (@ProjGUID)

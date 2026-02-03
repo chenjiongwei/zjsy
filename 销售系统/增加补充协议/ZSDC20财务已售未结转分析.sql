@@ -18,98 +18,99 @@ select
     
     -- 总体金额统计
     sum( isnull(sk.总已收房款,0) ) as 总已收房款,
-    sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else  0  end ) as 总实际成交金额,
+    sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 then isnull(st.BcAfterCTotal,st.ocjtotal) else  0  end ) as 总实际成交金额,
+    
     sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 then 
          case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else  0  end ) as 总实际成交面积,
     sum( isnull(jz.结转金额,0)) as 累计已结转金额,
     sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 and jz.tradeguid is not null then 
          case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else  0  end ) as  累计已结转面积,
 
-    sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else  0  end - isnull(jz.结转金额,0) ) as 总已售未结货值,
+    sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 then isnull(st.BcAfterCTotal,st.ocjtotal) else  0  end - isnull(jz.结转金额,0) ) as 总已售未结货值,
     sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
          then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else  0 end  ) - 
     sum( case when datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 and jz.tradeguid is not null then 
          case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else  0  end ) as 总已售未结面积,
     -- 实时的已售未结转货值、面积 统计 不受查询时间影响
-    sum( isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) - isnull(jzNow.结转金额实时,0) ) as 总已售未结货值_实时,
+    sum( isnull(st.BcAfterCTotal,st.ocjtotal) - isnull(jzNow.结转金额实时,0) ) as 总已售未结货值_实时,
     sum( case when st.tradeguid is not null then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end ) - 
     sum( case when jzNow.tradeguid is not null then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else  0  end ) as 总已售未结面积_实时,
     
     -- 销售状态统计
-    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) 
+    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,st.ocjtotal) 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal))  else 0 end) as 已网签已回全款,
-    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) 
+             then isnull(st.BcAfterCTotal,st.ocjtotal)  else 0 end) as 已网签已回全款,
+    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,st.ocjtotal) 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end) as 已网签已回全款面积,          
-    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)),0) 
+    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,st.ocjtotal),0) 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then isnull(st.BcAfterCTotal,st.ocjtotal)  else 0 end) as 已网签未回全款,
-    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)),0) 
+    sum(case when jz.tradeguid is null and st.CNetQsDate is not null and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,st.ocjtotal),0) 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end) as 已网签未回全款面积,
     sum(case when jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal))  else 0 end) as 已草签未网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal)  else 0 end) as 已草签未网签,
     sum(case when jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end) as 已草签未网签面积,
     sum(case when jz.tradeguid is null and st.ostatus='激活' 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal))  else 0 end) as 已认购未签约,
+             then isnull(st.BcAfterCTotal,st.ocjtotal)  else 0 end) as 已认购未签约,
     sum(case when jz.tradeguid is null and st.ostatus='激活' 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end) as 已认购未签约面积,
     sum(case when jz.tradeguid is null 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal))  else 0 end) as 已售未结货值小计,
+             then isnull(st.BcAfterCTotal,st.ocjtotal)  else 0 end) as 已售未结货值小计,
     sum(case when jz.tradeguid is null 
              and datediff(day,isnull(st.CQsDate,st.OQsDate),@var_EndDate) >=0 
              then case when ISNULL(sr.ScBldArea,0) <> 0  THEN  isnull(sr.ScBldArea,0) ELSE  isnull(sr.YsBldArea,0) end else 0 end) as 已售未结面积小计,
 
     -- 本年预计交房统计
     sum(case when year(st.YjfDate)=year(@var_EndDate) and jz.tradeguid is null 
-	         and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 本年预计交房已网签已回全款,
+	         and st.CNetQsDate is not null and sk.总已收房款>=isnull(st.BcAfterCTotal,st.ocjtotal) 
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 本年预计交房已网签已回全款,
     sum(case when year(st.YjfDate)=year(@var_EndDate) and jz.tradeguid is null and st.CNetQsDate is not null 
-	        and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)),0) 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 本年预计交房已网签未回全款,
+	        and isnull(sk.总已收房款,0)<isnull(isnull(st.BcAfterCTotal,st.ocjtotal),0) 
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 本年预计交房已网签未回全款,
     sum(case when year(st.YjfDate)=year(@var_EndDate) and jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 本年预计交房已草签未网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 本年预计交房已草签未网签,
     sum(case when year(st.YjfDate)=year(@var_EndDate) and jz.tradeguid is null and st.ostatus='激活' 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 本年预计交房已认购未签约,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 本年预计交房已认购未签约,
     sum(case when year(st.YjfDate)=year(@var_EndDate) and jz.tradeguid is null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 本年预计交房已售未结货值小计,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 本年预计交房已售未结货值小计,
     
     -- 明年预计交房统计
     sum(case when year(st.YjfDate)=year(@var_EndDate)+1 and jz.tradeguid is null and st.CNetQsDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 明年预计交房已网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 明年预计交房已网签,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+1 and jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 明年预计交房已草签未网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 明年预计交房已草签未网签,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+1 and jz.tradeguid is null and st.ostatus='激活' 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 明年预计交房已认购未签约,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 明年预计交房已认购未签约,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+1 and jz.tradeguid is null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 明年预计交房已售未结货值小计,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 明年预计交房已售未结货值小计,
     
     -- 后年预计交房统计
     sum(case when year(st.YjfDate)=year(@var_EndDate)+2 and jz.tradeguid is null and st.CNetQsDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年预计交房已网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年预计交房已网签,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+2 and jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年预计交房已草签未网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年预计交房已草签未网签,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+2 and jz.tradeguid is null and st.ostatus='激活' 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年预计交房已认购未签约,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年预计交房已认购未签约,
     sum(case when year(st.YjfDate)=year(@var_EndDate)+2 and jz.tradeguid is null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年预计交房已售未结货值小计,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年预计交房已售未结货值小计,
     
     -- 后年之后预计交房统计
     sum(case when year(st.YjfDate)>year(@var_EndDate)+2 and jz.tradeguid is null and st.CNetQsDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年之后预计交房已网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年之后预计交房已网签,
     sum(case when year(st.YjfDate)>year(@var_EndDate)+2 and jz.tradeguid is null and st.CNetQsDate is null and st.x_InitialledDate is not null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年之后预计交房已草签未网签,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年之后预计交房已草签未网签,
     sum(case when year(st.YjfDate)>year(@var_EndDate)+2 and jz.tradeguid is null and st.ostatus='激活' 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年之后预计交房已认购未签约,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年之后预计交房已认购未签约,
     sum(case when year(st.YjfDate)>year(@var_EndDate)+2 and jz.tradeguid is null 
-             then isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) else 0 end) as 后年之后预计交房已售未结货值小计,
+             then isnull(st.BcAfterCTotal,st.ocjtotal) else 0 end) as 后年之后预计交房已售未结货值小计,
     
     -- 余货统计
     sum(case when st.tradeguid is null and isnull(sr.DjTotal,0)>0 then 1 else 0 end) as 余货套数,

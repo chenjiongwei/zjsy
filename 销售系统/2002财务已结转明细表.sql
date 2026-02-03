@@ -18,7 +18,7 @@ select
     st.tzffSdate as 通知发放开始日期,
     st.tzffDdate as 通知发放结束日期,
     isnull(st.CCstAllName,st.OCstAllName) 客户名称,
-    isnull(st.BcAfterCTotal,st.ocjtotal) as 实际成交金额,
+    isnull(st.BcAfterCTotal,isnull(st.ccjtotal,st.ocjtotal)) as 实际成交金额,
     sk.总已收房款 as 已收房款,
     jz.结转日期 as 结转日期,
     jz.结转金额 as 结转金额,
@@ -57,48 +57,3 @@ where isnull(st.BcAfterCTotal,st.ocjtotal) > 0
     and jz.结转日期 between @var_jzSdate and @var_jzEdate
     -- and sr.YjfDate between @var_jfSdate and @var_jfEdate
 order by pro.projname, sr.roominfo
-
-
-
--- /*
--- 1：合同登记服务
--- 2：按揭服务
--- 3：入伙服务
--- 4：产权服务
--- 5：公积金服务
--- */
--- SELECT  sc.WideGUID ,
---         MAX(CASE WHEN ServiceItemEnum = 1 THEN ServiceProc ELSE NULL END) HtdjServiceProc ,     --合同登记服务进程
---         MAX(CASE WHEN ServiceItemEnum = 1 THEN CompleteDate ELSE NULL END) HtdjCompleteDate ,   --合同登记服务进程实际完成日期
---         MAX(CASE WHEN ServiceItemEnum = 2 THEN ServiceProc ELSE NULL END) AjServiceProc ,       --按揭服务进程实际完成日期
---         MAX(CASE WHEN ServiceItemEnum = 2 THEN CompleteDate ELSE NULL END) AjCompleteDate ,     --按揭服务进程实际完成日期
---         MAX(CASE WHEN ServiceItemEnum = 5 THEN ServiceProc ELSE NULL END) GjjServiceProc ,      --公积金服务进程
---         MAX(CASE WHEN ServiceItemEnum = 5 THEN CompleteDate ELSE NULL END) GjjCompleteDate ,    -- 公积金服务进程实际完成日期
---         MAX(CASE WHEN ServiceItemEnum = 3 THEN ServiceProc ELSE NULL END) RhServiceProc ,
---         MAX(CASE WHEN ServiceItemEnum = 3 THEN CompleteDate ELSE NULL END) RhCompleteDate ,     -- 入伙服务进程实际完成日期
---         MAX(CASE WHEN ServiceItemEnum = 4 THEN ServiceProc ELSE NULL END) CqServiceProc ,
---         MAX(CASE WHEN ServiceItemEnum = 4 THEN CompleteDate ELSE NULL END) CqCompleteDate,       --产权服务进程实际完成日期
---         MAX(ss.已入伙登记日期) as yrhdate,
---         max(tz.通知发放开始日期) as tzffSdate,
---         max(tz.通知发放结束日期) as tzffDdate
--- FROM    s_SaleService s
--- left join 
--- (
--- select   
--- SaleServiceGUID,max(completedate) as 已入伙登记日期
--- from s_SaleServiceProc 
--- where ServiceProc='已入伙登记'
--- group by SaleServiceGUID
--- ) ss on s.s_SaleServiceGUID=ss.SaleServiceGUID
--- -- 通知发放
--- LEFT JOIN  (
--- 	select   
--- 	SaleServiceGUID,
--- 	max(NextScheduledDate) as 通知发放开始日期,
--- 	MAX(completedate) as 通知发放结束日期
--- 	from s_SaleServiceProc 
--- 	where ServiceProc='通知发放'
--- 	group by SaleServiceGUID
--- ) tz ON s.s_SaleServiceGUID= tz.SaleServiceGUID 
--- INNER JOIN s_Contract sc ON sc.ContractGUID = s.SaleGUID
--- GROUP BY sc.WideGUID

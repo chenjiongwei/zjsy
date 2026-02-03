@@ -107,3 +107,52 @@ where Code  in
 '一期 设变-D-19会审'
 )
 
+
+
+---//////////////2025-05-16  现场签证关联联系单 ////////////////////////-----------------
+
+-- 将Excel表数据插入临时表
+CREATE TABLE [dbo].[待修复联系单20250516](
+	[序号] [float] NULL,
+	[联系单编号] [nvarchar](255) NULL,
+	[联系单名称] [nvarchar](255) NULL,
+	[联系单类型] [nvarchar](255) NULL,
+	[变更编号] [nvarchar](255) NULL,
+	[变更名称] [nvarchar](255) NULL,
+	[变更类型] [nvarchar](255) NULL
+) ON [PRIMARY]
+
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (1, N'XM项外-2024（15）号', N'关于园区垃圾分类收集点扩大铺装和增加电源、园区新增照明灯的事宜', N'现场签证', N'XMKYZ-YL-[园建]-QZ-064', N'关于园区垃圾分类收集点扩大铺装和增加电源、园区新增照明灯的相关事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (2, N'XM项外-2023（11）号', N'关于展示区新建B户型样板房事宜', N'现场签证', N'XMKYZ-TJ-[B户型样板房]-QZ-018', N'关于展示区新建B户型样板房事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (3, N'XM-20241206-214', N'关于延展区花基、升井及地面打凿施工相关事宜', N'现场签证', N'XMKYZ-YL-[园建]-QZ-065', N'关于延展区花基、升井及地面打凿施工相关事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (4, N'XM-20241126-200', N'关于设计变更造成施工现场返工拆改的事宜', N'现场签证', N'XMKYZ-土建-[A6#栋、地下室]-QZ-052', N'关于设计变更造成施工现场返工拆改的事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (5, N'XM-20240424-162', N'关于A5负一层覆盖机房、地下室负二层泡沫罐间面积扩大事宜', N'现场签证', N'XMKYZ-TJ-[地下室]-QZ-047', N'关于A5负一层5G覆盖机房、地下室负二层泡沫罐间面积扩大事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (6, N'XM-20220602-69', N'关于样板房E、D户型雨棚更改事宜', N'现场签证', N'XMKYZ-TJ-[售楼部]-QZ-004', N'关于样板房E、D户型雨棚更改事宜', N'现场签证')
+GO
+INSERT [dbo].[待修复联系单20250516] ([序号], [联系单编号], [联系单名称], [联系单类型], [变更编号], [变更名称], [变更类型]) VALUES (7, N'BYH项外-2021（20）号', N'关于三个集装箱采购事宜', N'现场签证', N'XMKYZ-TJ-[公交车站]-QZ-021', N'关于三个集装箱采购事宜', N'现场签证')
+GO
+
+
+-- 备份数据
+SELECT  * INTO cb_LocaleAlterApply_bak20250516 FROM  cb_LocaleAlterApply
+
+--查询数据
+SELECT a.ContractItemGUID,a.Name,alt.AlterGUID,alt.x_ContractItemGUID,alt.x_ContractItemName 
+FROM  cb_ContractItem a
+INNER JOIN [待修复联系单20250516] b ON a.[Code] =b.[联系单编号]
+INNER JOIN cb_LocaleAlterApply alt ON alt.AlterCode =b.[变更编号]
+WHERE alt.x_ContractItemGUID IS NULL 
+
+
+-- 修复：将现场签证同联系单关联
+UPDATE alt   SET  alt.x_ContractItemGUID =a.ContractItemGUID,alt.x_ContractItemName =a.Name
+FROM  cb_ContractItem a
+INNER JOIN [待修复联系单20250516] b ON a.[Code] =b.[联系单编号]
+INNER JOIN cb_LocaleAlterApply alt ON alt.AlterCode =b.[变更编号]
+WHERE alt.x_ContractItemGUID IS NULL 

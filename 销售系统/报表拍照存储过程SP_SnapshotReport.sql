@@ -1,6 +1,6 @@
 USE [dotnet_erp60_MDC]
 GO
-/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/1/15 21:05:20 ******/
+/****** Object:  StoredProcedure [dbo].[SP_SnapshotReport]    Script Date: 2025/5/28 16:52:54 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1829,7 +1829,7 @@ BEGIN
                 ON g.VouchGUID = v.VouchGUID
             INNER JOIN data_wide_s_trade st 
                 ON g.SaleGUID = st.tradeguid 
-                AND (st.cstatus = '激活' OR st.ostatus = '激活')
+                and st.IsLast = 1 -- AND (st.cstatus = '激活' OR st.ostatus = '激活')
         WHERE g.VouchStatus <> '作废' 
             AND g.ItemType IN ('贷款类房款', '非贷款类房款', '补充协议款')  -- and g.ItemName !='诚意金'
             AND DATEDIFF(YEAR, ISNULL(g.SkDate, 0), GETDATE()) = 0;        -- and st.BUGUID in (@buguid) and g.ParentProjGUID in (@Projguid) 
